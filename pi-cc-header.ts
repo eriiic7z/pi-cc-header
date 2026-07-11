@@ -13,6 +13,7 @@ const brand = (s: string) => `\x1b[1m${s}\x1b[22m`;
 
 /* ── 品牌色 ── */
 const LOGO_INTERVAL = 75;
+let stripeEnabled = true;
 
 /* ── Pi 官方 Logo 动画（提取自 pi.dev/install.sh）── */
 type LogoColor =
@@ -115,8 +116,7 @@ function logoCellColor(frame: LogoFrame, y: number, x: number): LogoColor {
 	if (frame.phase === 6) {
 		const isPi = has("3,2 3,3 3,4 4,4 4,2 5,2 5,3 5,5 6,2 6,5");
 		if (isPi) return "white";
-		// Fill non-Pi pixels with stripes, x≤6 to keep right margin matching left
-		return (y >= 2 && y <= 7 && x <= 6) ? "stripe" : "panel";
+		return (stripeEnabled && y >= 2 && y <= 7 && x <= 6) ? "stripe" : "panel";
 	}
 	if (frame.phase === 4) {
 		if (has("2,2 2,3 2,4 3,4")) return "cyan";
@@ -149,9 +149,15 @@ function piLogoFrame(frameIndex: number, bc: (s: string) => string): string[] {
 	return lines;
 }
 
-const PRECOMPUTED_LOGO_FRAMES: string[][] = LOGO_FRAMES.map((_, i) =>
+let PRECOMPUTED_LOGO_FRAMES: string[][] = LOGO_FRAMES.map((_, i) =>
 	piLogoFrame(i, (s: string) => brand(s)),
 );
+
+function recomputeFrames(): void {
+	PRECOMPUTED_LOGO_FRAMES = LOGO_FRAMES.map((_, i) =>
+		piLogoFrame(i, (s: string) => brand(s)),
+	);
+}
 
 /* ── 工具函数 ── */
 function formatCwd(cwd: string): string {
@@ -332,6 +338,18 @@ export default function (pi: ExtensionAPI) {
 			ctx.ui.setWorkingIndicator();
 			ctx.ui.setEditorComponent(undefined);
 			ctx.ui.notify("Built-in pi look restored", "info");
+		},
+	});
+	pi.registerCommand("lined", {
+		description: "Toggle IBM stripe style on/off",
+		handler: async (_args, ctx) => {
+			stripeEnabled = !stripeEnabled;
+			recomputeFrames();
+			// Rebuild header to pick up new frames
+			active?.dispose();
+			active = undefined;
+			apply(pi, ctx);
+			ctx.ui.notify(`Lined: ${stripeEnabled ? "ON" : "OFF"}`, "info");
 		},
 	});
 }

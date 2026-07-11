@@ -1,5 +1,16 @@
 # 变更日志
 
+## v0.4.1 (2026-07-12)
+
+### 新增
+
+- `/lined` 命令开关 IBM 横线
+- `stripeEnabled` 标志和 `recomputeFrames()` 函数
+
+### 变更
+
+- `PRECOMPUTED_LOGO_FRAMES` 由 `const` 改为 `let`
+
 ## v0.4.0 (2026-07-12)
 
 ### 新增

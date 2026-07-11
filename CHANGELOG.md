@@ -2,6 +2,17 @@
 
 All notable changes to pi-cc-header.
 
+## v0.4.1 (2026-07-12)
+
+### Added
+
+- `/lined` command to toggle IBM stripes on/off
+- `stripeEnabled` flag and `recomputeFrames()` function
+
+### Changed
+
+- `PRECOMPUTED_LOGO_FRAMES` changed from `const` to `let`
+
 ## v0.4.0 (2026-07-12)
 
 ### Added
