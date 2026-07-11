@@ -2,6 +2,18 @@
 
 All notable changes to pi-cc-header.
 
+## v0.4.0 (2026-07-12)
+
+### Added
+
+- IBM-style horizontal stripes: non-Pi pixels on final frame render as `──`
+- Stripe area constrained to Pi rows (y≥2) with symmetric margins (x≤6)
+- Skip blank top row (y=1) in render
+
+### Changed
+
+- Added `stripe` color type to `LogoColor` and `colorCell`
+
 ## v0.3.0 (2026-07-12)
 
 ### Removed

@@ -22,7 +22,8 @@ type LogoColor =
 	| "green"
 	| "orange"
 	| "white"
-	| "flash";
+	| "flash"
+	| "stripe";
 type LogoPhase = "left" | "top" | "right" | "none";
 type LogoFrame = {
 	phase: number;
@@ -83,6 +84,8 @@ const colorCell = (color: LogoColor, bc: (s: string) => string): string => {
 			return "\x1b[33m██\x1b[39m";
 		case "white":
 			return "\x1b[39m██";
+		case "stripe":
+			return "\x1b[39m──";
 		case "brand":
 			return bc("██");
 		default:
@@ -109,8 +112,12 @@ function logoCellColor(frame: LogoFrame, y: number, x: number): LogoColor {
 	if (frame.active === "right" && piece(frame.ay, frame.ax, "0,0 1,0 2,0 2,1"))
 		return "green";
 
-	if (frame.phase === 6)
-		return has("3,2 3,3 3,4 4,4 4,2 5,2 5,3 5,5 6,2 6,5") ? "white" : "panel";
+	if (frame.phase === 6) {
+		const isPi = has("3,2 3,3 3,4 4,4 4,2 5,2 5,3 5,5 6,2 6,5");
+		if (isPi) return "white";
+		// Fill non-Pi pixels with stripes, x≤6 to keep right margin matching left
+		return (y >= 2 && y <= 7 && x <= 6) ? "stripe" : "panel";
+	}
 	if (frame.phase === 4) {
 		if (has("2,2 2,3 2,4 3,4")) return "cyan";
 		if (has("3,2 4,2 4,3 5,2")) return "red";
@@ -240,7 +247,7 @@ class PiHeader implements Component {
 		};
 
 		const lines: string[] = [];
-		for (let i = 0; i < logoLines.length; i++) {
+		for (let i = 1; i < logoLines.length; i++) {
 			const right = info[i] != null ? padRight(info[i], infoMaxWidth) : "";
 			lines.push(
 				padRight(logoLines[i] ?? "", logoWidth) + right,
