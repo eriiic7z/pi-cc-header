@@ -142,6 +142,10 @@ function piLogoFrame(frameIndex: number, bc: (s: string) => string): string[] {
 	return lines;
 }
 
+const PRECOMPUTED_LOGO_FRAMES: string[][] = LOGO_FRAMES.map((_, i) =>
+	piLogoFrame(i, (s: string) => brand(s)),
+);
+
 /* ── 工具函数 ── */
 function formatCwd(cwd: string): string {
 	const home = process.env.HOME;
@@ -194,8 +198,10 @@ function computeStats(ctx: ExtensionContext) {
 /* ── 组件：启动头部 ── */
 class PiHeader implements Component {
 	private frame = 0;
-	private readonly timer: NodeJS.Timeout;
+	private timer: NodeJS.Timeout;
 	private readonly stats: { extensions: number; skills: number };
+	private removeInputListener?: () => void;
+	private mouseBuf = "";
 
 	constructor(
 		private readonly pi: ExtensionAPI,
@@ -213,17 +219,37 @@ class PiHeader implements Component {
 			}
 		}, LOGO_INTERVAL);
 		this.timer.unref?.();
+		setTimeout(() => {
+			this.enableMouse();
+			const listen = this.ctx.ui.onTerminalInput ?? this.tui.addInputListener.bind(this.tui);
+			this.removeInputListener = listen((data: string) => {
+				this.mouseBuf += data;
+				// SGR mouse: \x1b[<{btn};{col};{row}M (press) or m (release)
+				let m: RegExpExecArray | null;
+				while ((m = /\x1b\[<(\d+);(\d+);(\d+)[Mm]/.exec(this.mouseBuf)) !== null) {
+					const btn = parseInt(m[1]);
+					const col = parseInt(m[2]);
+					const row = parseInt(m[3]);
+					if (btn === 0 && row < 8 && col < 30) this.restart();
+					// Mouse press outside logo: disable tracking, auto re-enable after 2s
+					else if (m[0].endsWith("M")) {
+						this.disableMouse();
+						setTimeout(() => this.enableMouse(), 2000);
+					}
+					this.mouseBuf = this.mouseBuf.slice(m.index + m[0].length);
+				}
+				if (this.mouseBuf.length > 200) this.mouseBuf = "";
+			});
+		}, 100);
 	}
 
 	render(width: number): string[] {
 		const theme = this.ctx.ui.theme;
 		const muted = (s: string) => theme.fg("muted", s);
 
-		const logoLines = piLogoFrame(this.frame, (s: string) => brand(s));
+		const logoLines = PRECOMPUTED_LOGO_FRAMES[this.frame];
 		const logoWidth = 14;
-		const gap = 0;
-		const infoStart = logoWidth + gap;
-		const infoMaxWidth = Math.max(0, width - infoStart);
+		const infoMaxWidth = Math.max(0, width - logoWidth);
 
 		const model = this.ctx.model?.id ?? "Default";
 		const effort = this.pi.getThinkingLevel();
@@ -241,17 +267,40 @@ class PiHeader implements Component {
 		for (let i = 0; i < logoLines.length; i++) {
 			const right = info[i] != null ? padRight(info[i], infoMaxWidth) : "";
 			lines.push(
-				padRight(logoLines[i] ?? "", logoWidth) +
-					" ".repeat(gap) +
-					(info[i] != null ? right : ""),
+				padRight(logoLines[i] ?? "", logoWidth) + right,
 			);
 		}
 		return lines.map((l) => padRight(truncateToWidth(l, width, ""), width));
 	}
 
+	private restart(): void {
+		clearInterval(this.timer);
+		this.frame = 0;
+		this.timer = setInterval(() => {
+			if (this.frame < LOGO_FRAMES.length - 1) {
+				this.frame++;
+				this.tui.requestRender();
+			} else {
+				clearInterval(this.timer);
+				this.tui.requestRender();
+			}
+		}, LOGO_INTERVAL);
+		this.timer.unref?.();
+	}
+
+	private enableMouse(): void {
+		process.stdout.write("\x1b[?1000h\x1b[?1006h\x1b[?1015h");
+	}
+
+	private disableMouse(): void {
+		process.stdout.write("\x1b[?1000l\x1b[?1006l\x1b[?1015l");
+	}
+
 	invalidate(): void {}
 	dispose(): void {
 		clearInterval(this.timer);
+		this.removeInputListener?.();
+		this.disableMouse();
 	}
 }
 
