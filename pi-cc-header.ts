@@ -14,6 +14,11 @@ const brand = (s: string) => `\x1b[1m${s}\x1b[22m`;
 /* ── 品牌色 ── */
 const LOGO_INTERVAL = 75;
 let stripeEnabled = true;
+let versionColored = 0; // 0=none 1=Pi only 2=Pi+version
+let logoColorCode = "34"; // default blue
+const CMAP: Record<string, string> = {
+	r: "31", o: "38;5;208", y: "38;5;226", g: "32", b: "34", p: "38;5;129", w: "38;5;15",
+};
 
 /* ── Pi 官方 Logo 动画（提取自 pi.dev/install.sh）── */
 type LogoColor =
@@ -24,7 +29,9 @@ type LogoColor =
 	| "orange"
 	| "white"
 	| "flash"
-	| "stripe";
+	| "stripe"
+	| "logo"
+	| "logoStripe";
 type LogoPhase = "left" | "top" | "right" | "none";
 type LogoFrame = {
 	phase: number;
@@ -85,8 +92,10 @@ const colorCell = (color: LogoColor, bc: (s: string) => string): string => {
 			return "\x1b[33m██\x1b[39m";
 		case "white":
 			return "\x1b[39m██";
-		case "stripe":
-			return "\x1b[39m──";
+		case "logo":
+			return `\x1b[${logoColorCode}m██\x1b[39m`;
+		case "logoStripe":
+			return `\x1b[${logoColorCode}m──\x1b[39m`;
 		case "brand":
 			return bc("██");
 		default:
@@ -115,8 +124,8 @@ function logoCellColor(frame: LogoFrame, y: number, x: number): LogoColor {
 
 	if (frame.phase === 6) {
 		const isPi = has("3,2 3,3 3,4 4,4 4,2 5,2 5,3 5,5 6,2 6,5");
-		if (isPi) return "white";
-		return (stripeEnabled && y >= 2 && y <= 7 && x <= 6) ? "stripe" : "panel";
+		if (isPi) return "logo";
+		return (stripeEnabled && y >= 2 && y <= 7 && x <= 6) ? "logoStripe" : "panel";
 	}
 	if (frame.phase === 4) {
 		if (has("2,2 2,3 2,4 3,4")) return "cyan";
@@ -235,6 +244,7 @@ class PiHeader implements Component {
 	render(width: number): string[] {
 		const theme = this.ctx.ui.theme;
 		const muted = (s: string) => theme.fg("muted", s);
+		const logoBrand = (s: string) => `\x1b[1m\x1b[${logoColorCode}m${s}\x1b[39m\x1b[22m`;
 
 		const logoLines = PRECOMPUTED_LOGO_FRAMES[this.frame];
 		const logoWidth = 14;
@@ -245,8 +255,13 @@ class PiHeader implements Component {
 		const cwd = formatCwd(this.ctx.cwd);
 		const statsLine = `${this.stats.extensions} extensions · ${this.stats.skills} skills`;
 
+		const piText = versionColored >= 2
+			? logoBrand(`Pi v${VERSION}`)
+			: versionColored >= 1
+			? `${logoBrand("Pi")} v${VERSION}`
+			: `Pi v${VERSION}`;
 		const info: Record<number, string> = {
-			2: `${brand("Pi")} v${VERSION}`,
+			2: piText,
 			3: muted(`${model} · ${effort}`),
 			4: muted(statsLine),
 			5: muted(cwd),
@@ -340,8 +355,8 @@ export default function (pi: ExtensionAPI) {
 			ctx.ui.notify("Built-in pi look restored", "info");
 		},
 	});
-	pi.registerCommand("lined", {
-		description: "Toggle IBM stripe style on/off",
+	pi.registerCommand("hl", {
+		description: "Toggle horizontal lines on/off",
 		handler: async (_args, ctx) => {
 			stripeEnabled = !stripeEnabled;
 			recomputeFrames();
@@ -349,7 +364,36 @@ export default function (pi: ExtensionAPI) {
 			active?.dispose();
 			active = undefined;
 			apply(pi, ctx);
-			ctx.ui.notify(`Lined: ${stripeEnabled ? "ON" : "OFF"}`, "info");
+			ctx.ui.notify(`Lines: ${stripeEnabled ? "ON" : "OFF"}`, "info");
+		},
+	});
+
+	pi.registerCommand("hc", {
+		description: "Set header color: r=red o=orange y=yellow g=green b=blue p=purple w=white",
+		handler: async (args, ctx) => {
+			const code = CMAP[args ?? ""];
+			if (!code) {
+				ctx.ui.notify(`Colors: ${Object.keys(CMAP).join(" ")}`, "error");
+				return;
+			}
+			logoColorCode = code;
+			recomputeFrames();
+			active?.dispose();
+			active = undefined;
+			apply(pi, ctx);
+			ctx.ui.notify(`Color: ${args}`, "info");
+		},
+	});
+
+	pi.registerCommand("hv", {
+		description: "Toggle version number color follow logo",
+		handler: async (_args, ctx) => {
+			versionColored = (versionColored + 1) % 3;
+			const labels = ["OFF", "Pi only", "Pi+ver"];
+			active?.dispose();
+			active = undefined;
+			apply(pi, ctx);
+			ctx.ui.notify(`Version color: ${labels[versionColored]}`, "info");
 		},
 	});
 }

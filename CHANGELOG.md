@@ -2,6 +2,21 @@
 
 All notable changes to pi-cc-header.
 
+## v0.5.0 (2026-07-12)
+
+### Added
+
+- 7-color palette: red, orange, yellow, green, blue, purple, white
+- `/hc` command to set header color (`/hc r`, `/hc b`, etc.)
+- `/hv` command: toggle version number color (OFF / Pi only / Pi+version)
+- `CMAP` color map and dynamic `logo` / `logoStripe` color types
+- `logoBrand` function — Pi version text follows logo color
+
+### Changed
+
+- `/lined` renamed to `/hl`
+- Final frame Pi and stripes now use dynamic color
+
 ## v0.4.1 (2026-07-12)
 
 ### Added
