@@ -2,6 +2,13 @@
 
 All notable changes to pi-cc-header.
 
+## v0.2.1 (2026-07-12)
+
+### Changed
+
+- Simplified mouse tracking: always ON, no toggle on non-logo clicks
+- Non-logo mouse events ignored
+
 ## v0.2.0 (2026-07-11)
 
 ### Added

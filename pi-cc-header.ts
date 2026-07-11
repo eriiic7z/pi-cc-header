@@ -231,11 +231,6 @@ class PiHeader implements Component {
 					const col = parseInt(m[2]);
 					const row = parseInt(m[3]);
 					if (btn === 0 && row < 8 && col < 30) this.restart();
-					// Mouse press outside logo: disable tracking, auto re-enable after 2s
-					else if (m[0].endsWith("M")) {
-						this.disableMouse();
-						setTimeout(() => this.enableMouse(), 2000);
-					}
 					this.mouseBuf = this.mouseBuf.slice(m.index + m[0].length);
 				}
 				if (this.mouseBuf.length > 200) this.mouseBuf = "";
