@@ -1,5 +1,16 @@
 # 变更日志
 
+## v0.3.0 (2026-07-12)
+
+### 移除
+
+- 全部鼠标追踪、点击重播和输入监听代码
+- `handleInput`、`restart`、`enableMouse`、`disableMouse` 方法
+
+### 变更
+
+- `timer` 恢复为 `readonly` —— 纯动画 header
+
 ## v0.2.1 (2026-07-12)
 
 ### 变更

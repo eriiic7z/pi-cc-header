@@ -198,10 +198,8 @@ function computeStats(ctx: ExtensionContext) {
 /* ── 组件：启动头部 ── */
 class PiHeader implements Component {
 	private frame = 0;
-	private timer: NodeJS.Timeout;
+	private readonly timer: NodeJS.Timeout;
 	private readonly stats: { extensions: number; skills: number };
-	private removeInputListener?: () => void;
-	private mouseBuf = "";
 
 	constructor(
 		private readonly pi: ExtensionAPI,
@@ -219,23 +217,6 @@ class PiHeader implements Component {
 			}
 		}, LOGO_INTERVAL);
 		this.timer.unref?.();
-		setTimeout(() => {
-			this.enableMouse();
-			const listen = this.ctx.ui.onTerminalInput ?? this.tui.addInputListener.bind(this.tui);
-			this.removeInputListener = listen((data: string) => {
-				this.mouseBuf += data;
-				// SGR mouse: \x1b[<{btn};{col};{row}M (press) or m (release)
-				let m: RegExpExecArray | null;
-				while ((m = /\x1b\[<(\d+);(\d+);(\d+)[Mm]/.exec(this.mouseBuf)) !== null) {
-					const btn = parseInt(m[1]);
-					const col = parseInt(m[2]);
-					const row = parseInt(m[3]);
-					if (btn === 0 && row < 8 && col < 30) this.restart();
-					this.mouseBuf = this.mouseBuf.slice(m.index + m[0].length);
-				}
-				if (this.mouseBuf.length > 200) this.mouseBuf = "";
-			});
-		}, 100);
 	}
 
 	render(width: number): string[] {
@@ -268,34 +249,9 @@ class PiHeader implements Component {
 		return lines.map((l) => padRight(truncateToWidth(l, width, ""), width));
 	}
 
-	private restart(): void {
-		clearInterval(this.timer);
-		this.frame = 0;
-		this.timer = setInterval(() => {
-			if (this.frame < LOGO_FRAMES.length - 1) {
-				this.frame++;
-				this.tui.requestRender();
-			} else {
-				clearInterval(this.timer);
-				this.tui.requestRender();
-			}
-		}, LOGO_INTERVAL);
-		this.timer.unref?.();
-	}
-
-	private enableMouse(): void {
-		process.stdout.write("\x1b[?1000h\x1b[?1006h\x1b[?1015h");
-	}
-
-	private disableMouse(): void {
-		process.stdout.write("\x1b[?1000l\x1b[?1006l\x1b[?1015l");
-	}
-
 	invalidate(): void {}
 	dispose(): void {
 		clearInterval(this.timer);
-		this.removeInputListener?.();
-		this.disableMouse();
 	}
 }
 

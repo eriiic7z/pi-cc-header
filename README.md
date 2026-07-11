@@ -8,7 +8,6 @@ Animated Pi logo header for [pi coding agent](https://pi.dev).
 
 - 14-frame pixel-animated Pi logo from pi.dev/install.sh
 - Precomputed frames for zero-cost rendering
-- Click-to-replay animation with mouse tracking
 - Displays Pi version, model, thinking level, extension/skill counts, and cwd
 
 ## Credits
@@ -25,7 +24,6 @@ Logo animation adapted from [pi.dev/install.sh](https://pi.dev/install.sh).
 
 - 14 帧像素 Pi logo 动画（取自 pi.dev/install.sh）
 - 帧预计算，零开销渲染
-- 鼠标点击 logo 重播动画
 - 显示 Pi 版本、模型、思考级别、扩展/技能数量、当前目录
 
 ## 致谢

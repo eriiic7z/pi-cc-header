@@ -2,6 +2,17 @@
 
 All notable changes to pi-cc-header.
 
+## v0.3.0 (2026-07-12)
+
+### Removed
+
+- All mouse tracking, click-to-replay, and input listener code
+- `handleInput`, `restart`, `enableMouse`, `disableMouse` methods
+
+### Changed
+
+- Timer restored to `readonly` — animation-only header
+
 ## v0.2.1 (2026-07-12)
 
 ### Changed
