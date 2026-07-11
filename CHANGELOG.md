@@ -2,6 +2,12 @@
 
 All notable changes to pi-cc-header.
 
+## v0.5.1 (2026-07-12)
+
+### Fixed
+
+- Settings lost on restart/reload: `/hl`, `/hc`, `/hv` now persist to `settings.json` under `ccHeader` key
+
 ## v0.5.0 (2026-07-12)
 
 ### Added

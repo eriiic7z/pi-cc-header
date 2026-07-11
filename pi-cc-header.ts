@@ -317,7 +317,13 @@ export default function (pi: ExtensionAPI) {
 		writeFileSync(settingsPath, JSON.stringify(s, null, 2) + "\n", "utf-8");
 
 	pi.on("session_start", (_event, ctx) => {
-		if (getSettings().clearOnStart === true) {
+		const s = getSettings();
+		const h = s.ccHeader || {};
+		stripeEnabled = h.lines ?? true;
+		versionColored = h.ver ?? 0;
+		if (h.color) logoColorCode = h.color;
+		recomputeFrames();
+		if (s.clearOnStart === true) {
 			process.stdout.write("\x1b[2J\x1b[3J\x1b[H");
 		}
 		setTimeout(() => apply(pi, ctx), 0);
@@ -359,6 +365,9 @@ export default function (pi: ExtensionAPI) {
 		description: "Toggle horizontal lines on/off",
 		handler: async (_args, ctx) => {
 			stripeEnabled = !stripeEnabled;
+			const s = getSettings();
+			s.ccHeader = { ...s.ccHeader, lines: stripeEnabled };
+			saveSettings(s);
 			recomputeFrames();
 			// Rebuild header to pick up new frames
 			active?.dispose();
@@ -377,6 +386,9 @@ export default function (pi: ExtensionAPI) {
 				return;
 			}
 			logoColorCode = code;
+			const s = getSettings();
+			s.ccHeader = { ...s.ccHeader, color: code };
+			saveSettings(s);
 			recomputeFrames();
 			active?.dispose();
 			active = undefined;
@@ -389,6 +401,9 @@ export default function (pi: ExtensionAPI) {
 		description: "Toggle version number color follow logo",
 		handler: async (_args, ctx) => {
 			versionColored = (versionColored + 1) % 3;
+			const s = getSettings();
+			s.ccHeader = { ...s.ccHeader, ver: versionColored };
+			saveSettings(s);
 			const labels = ["OFF", "Pi only", "Pi+ver"];
 			active?.dispose();
 			active = undefined;
