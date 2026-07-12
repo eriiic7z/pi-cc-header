@@ -15,9 +15,20 @@ const brand = (s: string) => `\x1b[1m${s}\x1b[22m`;
 const LOGO_INTERVAL = 75;
 let stripeEnabled = true;
 let versionColored = 0; // 0=none 1=Pi only 2=Pi+version
-let logoColorCode = "34"; // default blue
+let gradientOn = true;
+let logoColorKey = "b"; // default blue
 const CMAP: Record<string, string> = {
 	r: "31", o: "38;5;208", y: "38;5;226", g: "32", b: "34", p: "38;5;129", w: "38;5;15",
+};
+// 24-bit RGB gradient: [light→dark] for each color
+const GMAP: Record<string, string[]> = {
+	r: ["38;2;255;80;80", "38;2;220;40;40", "38;2;180;20;20", "38;2;140;10;10"],
+	o: ["38;2;255;170;50", "38;2;230;140;30", "38;2;200;110;20", "38;2;160;80;10"],
+	y: ["38;2;255;255;80", "38;2;230;230;40", "38;2;200;200;20", "38;2;160;160;10"],
+	g: ["38;2;80;255;80", "38;2;40;220;40", "38;2;20;180;20", "38;2;10;140;10"],
+	b: ["38;2;100;180;255", "38;2;70;160;245", "38;2;40;130;220", "38;2;20;100;195"],
+	p: ["38;2;200;100;255", "38;2;170;70;230", "38;2;140;40;200", "38;2;110;20;160"],
+	w: ["38;2;255;255;255", "38;2;220;220;220", "38;2;180;180;180", "38;2;140;140;140"],
 };
 
 /* ── Pi 官方 Logo 动画（提取自 pi.dev/install.sh）── */
@@ -30,8 +41,8 @@ type LogoColor =
 	| "white"
 	| "flash"
 	| "stripe"
-	| "logo"
-	| "logoStripe";
+	| "l1" | "l2" | "l3" | "l4"
+	| "s1" | "s2" | "s3" | "s4";
 type LogoPhase = "left" | "top" | "right" | "none";
 type LogoFrame = {
 	phase: number;
@@ -93,9 +104,17 @@ const colorCell = (color: LogoColor, bc: (s: string) => string): string => {
 		case "white":
 			return "\x1b[39m██";
 		case "logo":
-			return `\x1b[${logoColorCode}m██\x1b[39m`;
+			return `\x1b[${CMAP[logoColorKey]}m██\x1b[39m`;
 		case "logoStripe":
-			return `\x1b[${logoColorCode}m──\x1b[39m`;
+			return `\x1b[${CMAP[logoColorKey]}m──\x1b[39m`;
+		case "l1": return `\x1b[${GMAP[logoColorKey]?.[0] ?? "34"}m██\x1b[39m`;
+		case "l2": return `\x1b[${GMAP[logoColorKey]?.[1] ?? "34"}m██\x1b[39m`;
+		case "l3": return `\x1b[${GMAP[logoColorKey]?.[2] ?? "34"}m██\x1b[39m`;
+		case "l4": return `\x1b[${GMAP[logoColorKey]?.[3] ?? "34"}m██\x1b[39m`;
+		case "s1": return `\x1b[${GMAP[logoColorKey]?.[0] ?? "34"}m──\x1b[39m`;
+		case "s2": return `\x1b[${GMAP[logoColorKey]?.[1] ?? "34"}m──\x1b[39m`;
+		case "s3": return `\x1b[${GMAP[logoColorKey]?.[2] ?? "34"}m──\x1b[39m`;
+		case "s4": return `\x1b[${GMAP[logoColorKey]?.[3] ?? "34"}m──\x1b[39m`;
 		case "brand":
 			return bc("██");
 		default:
@@ -124,8 +143,10 @@ function logoCellColor(frame: LogoFrame, y: number, x: number): LogoColor {
 
 	if (frame.phase === 6) {
 		const isPi = has("3,2 3,3 3,4 4,4 4,2 5,2 5,3 5,5 6,2 6,5");
-		if (isPi) return "logo";
-		return (stripeEnabled && y >= 2 && y <= 7 && x <= 6) ? "logoStripe" : "panel";
+		const lvl = gradientOn ? (y <= 3 ? 1 : y === 4 ? 2 : y === 5 ? 3 : 4) : 0;
+		if (isPi) return lvl > 0 ? ("l" + lvl) as LogoColor : "logo";
+		return (stripeEnabled && y >= 2 && y <= 7 && x <= 6)
+			? (lvl > 0 ? ("s" + lvl) as LogoColor : "logoStripe") : "panel";
 	}
 	if (frame.phase === 4) {
 		if (has("2,2 2,3 2,4 3,4")) return "cyan";
@@ -244,7 +265,7 @@ class PiHeader implements Component {
 	render(width: number): string[] {
 		const theme = this.ctx.ui.theme;
 		const muted = (s: string) => theme.fg("muted", s);
-		const logoBrand = (s: string) => `\x1b[1m\x1b[${logoColorCode}m${s}\x1b[39m\x1b[22m`;
+		const logoBrand = (s: string) => `\x1b[1m\x1b[${CMAP[logoColorKey]}m${s}\x1b[39m\x1b[22m`;
 
 		const logoLines = PRECOMPUTED_LOGO_FRAMES[this.frame];
 		const logoWidth = 14;
@@ -321,7 +342,8 @@ export default function (pi: ExtensionAPI) {
 		const h = s.ccHeader || {};
 		stripeEnabled = h.lines ?? true;
 		versionColored = h.ver ?? 0;
-		if (h.color) logoColorCode = h.color;
+		gradientOn = h.grad ?? true;
+		if (h.color && CMAP[h.color]) logoColorKey = h.color;
 		recomputeFrames();
 		if (s.clearOnStart === true) {
 			process.stdout.write("\x1b[2J\x1b[3J\x1b[H");
@@ -380,14 +402,13 @@ export default function (pi: ExtensionAPI) {
 	pi.registerCommand("hc", {
 		description: "Set header color: r=red o=orange y=yellow g=green b=blue p=purple w=white",
 		handler: async (args, ctx) => {
-			const code = CMAP[args ?? ""];
-			if (!code) {
+			if (!CMAP[args ?? ""]) {
 				ctx.ui.notify(`Colors: ${Object.keys(CMAP).join(" ")}`, "error");
 				return;
 			}
-			logoColorCode = code;
+			logoColorKey = args!;
 			const s = getSettings();
-			s.ccHeader = { ...s.ccHeader, color: code };
+			s.ccHeader = { ...s.ccHeader, color: args };
 			saveSettings(s);
 			recomputeFrames();
 			active?.dispose();
@@ -409,6 +430,21 @@ export default function (pi: ExtensionAPI) {
 			active = undefined;
 			apply(pi, ctx);
 			ctx.ui.notify(`Version color: ${labels[versionColored]}`, "info");
+		},
+	});
+
+	pi.registerCommand("hgd", {
+		description: "Toggle gradient on/off",
+		handler: async (_args, ctx) => {
+			gradientOn = !gradientOn;
+			const s = getSettings();
+			s.ccHeader = { ...s.ccHeader, grad: gradientOn };
+			saveSettings(s);
+			recomputeFrames();
+			active?.dispose();
+			active = undefined;
+			apply(pi, ctx);
+			ctx.ui.notify(`Gradient: ${gradientOn ? "ON" : "OFF"}`, "info");
 		},
 	});
 }

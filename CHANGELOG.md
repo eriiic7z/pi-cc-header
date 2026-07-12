@@ -2,6 +2,20 @@
 
 All notable changes to pi-cc-header.
 
+## v0.6.0 (2026-07-12)
+
+### Added
+
+- 4-level 24-bit true-color gradient (light→dark) on final frame
+- `/hgd` command to toggle gradient on/off
+- `GMAP` color gradient table — gradient follows `/hc` color switching
+- `logoColorKey` refactor: store color key instead of ANSI code
+
+### Changed
+
+- Pi pixels and stripes use `l1`–`l4` / `s1`–`s4` dynamic gradient levels
+- `logoBrand` and `colorCell` use `CMAP[logoColorKey]` for dynamic color
+
 ## v0.5.1 (2026-07-12)
 
 ### Fixed
