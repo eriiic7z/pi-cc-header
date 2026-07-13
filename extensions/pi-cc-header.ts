@@ -360,14 +360,12 @@ let active: PiHeader | undefined;
 
 function apply(pi: ExtensionAPI, ctx: ExtensionContext) {
 	if (ctx.mode !== "tui") return;
-	ctx.ui.setTitle("Pi");
+	process.stdout.write("\x1b[2J\x1b[3J\x1b[H");
 	ctx.ui.setHeader((tui) => {
 		active?.dispose();
 		active = new PiHeader(pi, ctx, tui);
 		return active;
 	});
-	ctx.ui.setFooter();
-	ctx.ui.setWorkingIndicator();
 }
 
 /* ── 入口 ── */
@@ -396,10 +394,19 @@ export default function (pi: ExtensionAPI) {
 		gradientOn = h.grad ?? true;
 		if (h.color && CMAP[h.color]) logoColorKey = h.color;
 		recomputeFrames();
-		s.quietStartup = true;
-		saveSettings(s);
-		process.stdout.write("\x1b[2J\x1b[3J\x1b[H");
-		if (!h.disabled) setTimeout(() => apply(pi, ctx), 0);
+		if (!h.disabled) {
+			if (s.rsl !== false) {
+				s.quietStartup = true;
+				s.clearOnStart = true;
+				saveSettings(s);
+				process.stdout.write("\x1b[2J\x1b[3J\x1b[H");
+			} else {
+				s.quietStartup = false;
+				s.clearOnStart = false;
+				saveSettings(s);
+			}
+			setTimeout(() => apply(pi, ctx), 0);
+		}
 	});
 
 	pi.registerCommand("htg", {
@@ -412,7 +419,9 @@ export default function (pi: ExtensionAPI) {
 				s.ccHeader = h;
 				h.disabled = false;
 				s.quietStartup = true;
+				s.clearOnStart = true;
 				saveSettings(s);
+				process.stdout.write("\x1b[2J\x1b[3J\x1b[H");
 				apply(pi, ctx);
 				ctx.ui.notify("pi-cc-header enabled", "info");
 			} else {
@@ -424,12 +433,14 @@ export default function (pi: ExtensionAPI) {
 				saveSettings(s);
 				active?.dispose();
 				active = undefined;
-				ctx.ui.setTitle("pi");
 				ctx.ui.setHeader(undefined);
-				ctx.ui.setFooter();
+				ctx.ui.setFooter(undefined);
 				ctx.ui.setWorkingIndicator();
 				ctx.ui.setEditorComponent(undefined);
-				ctx.ui.notify("pi-cc-header disabled", "info");
+				ctx.ui.notify(
+					"pi-cc-header disabled, changes apply next session",
+					"info",
+				);
 			}
 		},
 	});
@@ -540,6 +551,27 @@ export default function (pi: ExtensionAPI) {
 			active = undefined;
 			apply(pi, ctx);
 			ctx.ui.notify("Reset to developer defaults", "info");
+		},
+	});
+
+	pi.registerCommand("hrl", {
+		description: "Toggle resource list visibility (applies on next session)",
+		handler: async (_args, ctx) => {
+			const s = getSettings();
+			if ((s.ccHeader || {}).disabled) {
+				ctx.ui.notify("pi-cc-header is disabled, use /htg to enable", "info");
+				return;
+			}
+			s.rsl = s.rsl === false ? true : false;
+			saveSettings(s);
+			active?.dispose();
+			active = undefined;
+			apply(pi, ctx);
+			ctx.ui.notify(
+				`Resource list: ${s.rsl !== false ? "HIDDEN" : "VISIBLE"}`,
+				"info",
+			);
+			setTimeout(() => ctx.reload(), 100);
 		},
 	});
 }

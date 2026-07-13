@@ -21,14 +21,13 @@ Animated Pi logo header for [pi coding agent](https://pi.dev).
 | `/hc r/o/y/g/b/p/w` | Set logo color |
 | `/hv` | Cycle version color: OFF → Pi only → Pi+ver |
 | `/hg` | Toggle 24-bit gradient |
+| `/hrl` | Toggle resource list visibility |
 | `/htg` | Enable / disable pi-cc-header |
 | `/hdf` | Reset to developer defaults |
 
 ### Disabled state
 
-When pi-cc-header is disabled (`/htg`), all style commands are locked to prevent blind configuration. Use `/htg` again to re-enable.
-
-`/reload` and restart preserve the enabled/disabled state.
+When pi-cc-header is disabled (`/htg`), all style commands are locked to prevent blind configuration. Use `/htg` again to re-enable. Changes apply on the next session.
 
 ## Auto behavior
 
@@ -62,14 +61,13 @@ Logo animation adapted from [pi.dev/install.sh](https://pi.dev/install.sh).
 | `/hc r/o/y/g/b/p/w` | 设置 logo 颜色 |
 | `/hv` | 切换版本号颜色模式 |
 | `/hg` | 开关渐变 |
+| `/hrl` | 切换资源清单显示/隐藏 |
 | `/htg` | 启用 / 禁用 pi-cc-header |
 | `/hdf` | 恢复开发者默认配置 |
 
 ### 禁用状态
 
-pi-cc-header 被禁用后，所有样式命令会被锁定，防止盲操配置。重新执行 `/htg` 即可恢复。
-
-`/reload` 和重启均保持当前的启用/禁用状态。
+pi-cc-header 被禁用后，所有样式命令会被锁定，防止盲操配置。重新执行 `/htg` 即可恢复。更改将在下一次会话生效。
 
 ## 自动行为
 

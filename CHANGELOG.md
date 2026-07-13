@@ -2,6 +2,22 @@
 
 All notable changes to pi-cc-header.
 
+## v0.7.1 (2026-07-13)
+
+### Added
+
+- `/hrl` command to toggle resource list visibility on startup
+
+### Changed
+
+- `/htg` disable: manual TUI restore instead of `ctx.reload()` — applies on next session
+- Clear screen moved to `apply()` to cover resource list output
+
+### Fixed
+
+- `/htg` re-enable missing `clearOnStart` causing stale resource list
+- Removed `setFooter()` and `setWorkingIndicator()` from `apply()` — no longer overrides native footer
+
 ## v0.7.0 (2026-07-13)
 
 ### Added
