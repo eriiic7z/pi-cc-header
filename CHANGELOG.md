@@ -2,6 +2,12 @@
 
 All notable changes to pi-cc-header.
 
+## v0.7.2 (2026-07-13)
+
+### Fixed
+
+- Style command switching no longer clears input border and status bar — `apply()` now uses viewport-only clear for commands, full clear only on session start
+
 ## v0.7.1 (2026-07-13)
 
 ### Added

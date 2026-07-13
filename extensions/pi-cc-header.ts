@@ -358,9 +358,17 @@ class PiHeader implements Component {
 /* ── 挂载 ── */
 let active: PiHeader | undefined;
 
-function apply(pi: ExtensionAPI, ctx: ExtensionContext) {
+function apply(
+	pi: ExtensionAPI,
+	ctx: ExtensionContext,
+	clearMode: "full" | "viewport" = "full",
+) {
 	if (ctx.mode !== "tui") return;
-	process.stdout.write("\x1b[2J\x1b[3J\x1b[H");
+	if (clearMode === "full") {
+		process.stdout.write("\x1b[2J\x1b[3J\x1b[H");
+	} else {
+		process.stdout.write("\x1b[2J");
+	}
 	ctx.ui.setHeader((tui) => {
 		active?.dispose();
 		active = new PiHeader(pi, ctx, tui);
@@ -422,7 +430,7 @@ export default function (pi: ExtensionAPI) {
 				s.clearOnStart = true;
 				saveSettings(s);
 				process.stdout.write("\x1b[2J\x1b[3J\x1b[H");
-				apply(pi, ctx);
+				apply(pi, ctx, "viewport");
 				ctx.ui.notify("pi-cc-header enabled", "info");
 			} else {
 				// Disable
@@ -459,7 +467,7 @@ export default function (pi: ExtensionAPI) {
 			// Rebuild header to pick up new frames
 			active?.dispose();
 			active = undefined;
-			apply(pi, ctx);
+			apply(pi, ctx, "viewport");
 			ctx.ui.notify(`Lines: ${stripeEnabled ? "ON" : "OFF"}`, "info");
 		},
 	});
@@ -483,7 +491,7 @@ export default function (pi: ExtensionAPI) {
 			recomputeFrames();
 			active?.dispose();
 			active = undefined;
-			apply(pi, ctx);
+			apply(pi, ctx, "viewport");
 			ctx.ui.notify(`Color: ${args}`, "info");
 		},
 	});
@@ -502,7 +510,7 @@ export default function (pi: ExtensionAPI) {
 			const labels = ["OFF", "Pi only", "Pi+ver"];
 			active?.dispose();
 			active = undefined;
-			apply(pi, ctx);
+			apply(pi, ctx, "viewport");
 			ctx.ui.notify(`Version color: ${labels[versionColored]}`, "info");
 		},
 	});
@@ -521,7 +529,7 @@ export default function (pi: ExtensionAPI) {
 			recomputeFrames();
 			active?.dispose();
 			active = undefined;
-			apply(pi, ctx);
+			apply(pi, ctx, "viewport");
 			ctx.ui.notify(`Gradient: ${gradientOn ? "ON" : "OFF"}`, "info");
 		},
 	});
@@ -549,7 +557,7 @@ export default function (pi: ExtensionAPI) {
 			saveSettings(s);
 			active?.dispose();
 			active = undefined;
-			apply(pi, ctx);
+			apply(pi, ctx, "viewport");
 			ctx.ui.notify("Reset to developer defaults", "info");
 		},
 	});
@@ -566,7 +574,7 @@ export default function (pi: ExtensionAPI) {
 			saveSettings(s);
 			active?.dispose();
 			active = undefined;
-			apply(pi, ctx);
+			apply(pi, ctx, "viewport");
 			ctx.ui.notify(
 				`Resource list: ${s.rsl !== false ? "HIDDEN" : "VISIBLE"}`,
 				"info",
