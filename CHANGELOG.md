@@ -2,6 +2,27 @@
 
 All notable changes to pi-cc-header.
 
+## v0.7.0 (2026-07-13)
+
+### Added
+
+- `/htg` command to toggle pi-cc-header enabled/disabled (config preserved)
+- `/hdf` command to reset to developer defaults
+- Style commands locked when pi-cc-header is disabled (blind-config guard)
+- `disabled` flag in `ccHeader` config, persisted across reload/restart
+
+### Changed
+
+- `/hgd` renamed to `/hg`
+- `/pi-look` renamed to `/htg` (originally `/h-off`)
+- All commands unified to `h` + letter/double-letter naming: `/hl`, `/hc`, `/hv`, `/hg`, `/htg`, `/hdf`
+- Screen clear on every startup (unconditional, `/clear-on-start` removed)
+- `quietStartup` forced `true` on every session start
+
+### Removed
+
+- `/clear-on-start` command (now automatic and non-toggleable)
+
 ## v0.6.0 (2026-07-12)
 
 ### Added

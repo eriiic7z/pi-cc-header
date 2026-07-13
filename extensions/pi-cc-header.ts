@@ -18,17 +18,48 @@ let versionColored = 0; // 0=none 1=Pi only 2=Pi+version
 let gradientOn = true;
 let logoColorKey = "b"; // default blue
 const CMAP: Record<string, string> = {
-	r: "31", o: "38;5;208", y: "38;5;226", g: "32", b: "34", p: "38;5;129", w: "38;5;15",
+	r: "31",
+	o: "38;5;208",
+	y: "38;5;226",
+	g: "32",
+	b: "34",
+	p: "38;5;129",
+	w: "38;5;15",
 };
 // 24-bit RGB gradient: [light→dark] for each color
 const GMAP: Record<string, string[]> = {
 	r: ["38;2;255;80;80", "38;2;220;40;40", "38;2;180;20;20", "38;2;140;10;10"],
-	o: ["38;2;255;170;50", "38;2;230;140;30", "38;2;200;110;20", "38;2;160;80;10"],
-	y: ["38;2;255;255;80", "38;2;230;230;40", "38;2;200;200;20", "38;2;160;160;10"],
+	o: [
+		"38;2;255;170;50",
+		"38;2;230;140;30",
+		"38;2;200;110;20",
+		"38;2;160;80;10",
+	],
+	y: [
+		"38;2;255;255;80",
+		"38;2;230;230;40",
+		"38;2;200;200;20",
+		"38;2;160;160;10",
+	],
 	g: ["38;2;80;255;80", "38;2;40;220;40", "38;2;20;180;20", "38;2;10;140;10"],
-	b: ["38;2;100;180;255", "38;2;70;160;245", "38;2;40;130;220", "38;2;20;100;195"],
-	p: ["38;2;200;100;255", "38;2;170;70;230", "38;2;140;40;200", "38;2;110;20;160"],
-	w: ["38;2;255;255;255", "38;2;220;220;220", "38;2;180;180;180", "38;2;140;140;140"],
+	b: [
+		"38;2;100;180;255",
+		"38;2;70;160;245",
+		"38;2;40;130;220",
+		"38;2;20;100;195",
+	],
+	p: [
+		"38;2;200;100;255",
+		"38;2;170;70;230",
+		"38;2;140;40;200",
+		"38;2;110;20;160",
+	],
+	w: [
+		"38;2;255;255;255",
+		"38;2;220;220;220",
+		"38;2;180;180;180",
+		"38;2;140;140;140",
+	],
 };
 
 /* ── Pi 官方 Logo 动画（提取自 pi.dev/install.sh）── */
@@ -41,8 +72,17 @@ type LogoColor =
 	| "white"
 	| "flash"
 	| "stripe"
-	| "l1" | "l2" | "l3" | "l4"
-	| "s1" | "s2" | "s3" | "s4";
+	| "logo"
+	| "logoStripe"
+	| "brand"
+	| "l1"
+	| "l2"
+	| "l3"
+	| "l4"
+	| "s1"
+	| "s2"
+	| "s3"
+	| "s4";
 type LogoPhase = "left" | "top" | "right" | "none";
 type LogoFrame = {
 	phase: number;
@@ -107,14 +147,22 @@ const colorCell = (color: LogoColor, bc: (s: string) => string): string => {
 			return `\x1b[${CMAP[logoColorKey]}m██\x1b[39m`;
 		case "logoStripe":
 			return `\x1b[${CMAP[logoColorKey]}m──\x1b[39m`;
-		case "l1": return `\x1b[${GMAP[logoColorKey]?.[0] ?? "34"}m██\x1b[39m`;
-		case "l2": return `\x1b[${GMAP[logoColorKey]?.[1] ?? "34"}m██\x1b[39m`;
-		case "l3": return `\x1b[${GMAP[logoColorKey]?.[2] ?? "34"}m██\x1b[39m`;
-		case "l4": return `\x1b[${GMAP[logoColorKey]?.[3] ?? "34"}m██\x1b[39m`;
-		case "s1": return `\x1b[${GMAP[logoColorKey]?.[0] ?? "34"}m──\x1b[39m`;
-		case "s2": return `\x1b[${GMAP[logoColorKey]?.[1] ?? "34"}m──\x1b[39m`;
-		case "s3": return `\x1b[${GMAP[logoColorKey]?.[2] ?? "34"}m──\x1b[39m`;
-		case "s4": return `\x1b[${GMAP[logoColorKey]?.[3] ?? "34"}m──\x1b[39m`;
+		case "l1":
+			return `\x1b[${GMAP[logoColorKey]?.[0] ?? "34"}m██\x1b[39m`;
+		case "l2":
+			return `\x1b[${GMAP[logoColorKey]?.[1] ?? "34"}m██\x1b[39m`;
+		case "l3":
+			return `\x1b[${GMAP[logoColorKey]?.[2] ?? "34"}m██\x1b[39m`;
+		case "l4":
+			return `\x1b[${GMAP[logoColorKey]?.[3] ?? "34"}m██\x1b[39m`;
+		case "s1":
+			return `\x1b[${GMAP[logoColorKey]?.[0] ?? "34"}m──\x1b[39m`;
+		case "s2":
+			return `\x1b[${GMAP[logoColorKey]?.[1] ?? "34"}m──\x1b[39m`;
+		case "s3":
+			return `\x1b[${GMAP[logoColorKey]?.[2] ?? "34"}m──\x1b[39m`;
+		case "s4":
+			return `\x1b[${GMAP[logoColorKey]?.[3] ?? "34"}m──\x1b[39m`;
 		case "brand":
 			return bc("██");
 		default:
@@ -144,9 +192,12 @@ function logoCellColor(frame: LogoFrame, y: number, x: number): LogoColor {
 	if (frame.phase === 6) {
 		const isPi = has("3,2 3,3 3,4 4,4 4,2 5,2 5,3 5,5 6,2 6,5");
 		const lvl = gradientOn ? (y <= 3 ? 1 : y === 4 ? 2 : y === 5 ? 3 : 4) : 0;
-		if (isPi) return lvl > 0 ? ("l" + lvl) as LogoColor : "logo";
-		return (stripeEnabled && y >= 2 && y <= 7 && x <= 6)
-			? (lvl > 0 ? ("s" + lvl) as LogoColor : "logoStripe") : "panel";
+		if (isPi) return lvl > 0 ? (("l" + lvl) as LogoColor) : "logo";
+		return stripeEnabled && y >= 2 && y <= 7 && x <= 6
+			? lvl > 0
+				? (("s" + lvl) as LogoColor)
+				: "logoStripe"
+			: "panel";
 	}
 	if (frame.phase === 4) {
 		if (has("2,2 2,3 2,4 3,4")) return "cyan";
@@ -265,7 +316,8 @@ class PiHeader implements Component {
 	render(width: number): string[] {
 		const theme = this.ctx.ui.theme;
 		const muted = (s: string) => theme.fg("muted", s);
-		const logoBrand = (s: string) => `\x1b[1m\x1b[${CMAP[logoColorKey]}m${s}\x1b[39m\x1b[22m`;
+		const logoBrand = (s: string) =>
+			`\x1b[1m\x1b[${CMAP[logoColorKey]}m${s}\x1b[39m\x1b[22m`;
 
 		const logoLines = PRECOMPUTED_LOGO_FRAMES[this.frame];
 		const logoWidth = 14;
@@ -276,11 +328,12 @@ class PiHeader implements Component {
 		const cwd = formatCwd(this.ctx.cwd);
 		const statsLine = `${this.stats.extensions} extensions · ${this.stats.skills} skills`;
 
-		const piText = versionColored >= 2
-			? logoBrand(`Pi v${VERSION}`)
-			: versionColored >= 1
-			? `${logoBrand("Pi")} v${VERSION}`
-			: `Pi v${VERSION}`;
+		const piText =
+			versionColored >= 2
+				? logoBrand(`Pi v${VERSION}`)
+				: versionColored >= 1
+					? `${logoBrand("Pi")} v${VERSION}`
+					: `Pi v${VERSION}`;
 		const info: Record<number, string> = {
 			2: piText,
 			3: muted(`${model} · ${effort}`),
@@ -291,9 +344,7 @@ class PiHeader implements Component {
 		const lines: string[] = [];
 		for (let i = 1; i < logoLines.length; i++) {
 			const right = info[i] != null ? padRight(info[i], infoMaxWidth) : "";
-			lines.push(
-				padRight(logoLines[i] ?? "", logoWidth) + right,
-			);
+			lines.push(padRight(logoLines[i] ?? "", logoWidth) + right);
 		}
 		return lines.map((l) => padRight(truncateToWidth(l, width, ""), width));
 	}
@@ -345,49 +396,52 @@ export default function (pi: ExtensionAPI) {
 		gradientOn = h.grad ?? true;
 		if (h.color && CMAP[h.color]) logoColorKey = h.color;
 		recomputeFrames();
-		if (s.clearOnStart === true) {
-			process.stdout.write("\x1b[2J\x1b[3J\x1b[H");
-		}
-		setTimeout(() => apply(pi, ctx), 0);
+		s.quietStartup = true;
+		saveSettings(s);
+		process.stdout.write("\x1b[2J\x1b[3J\x1b[H");
+		if (!h.disabled) setTimeout(() => apply(pi, ctx), 0);
 	});
 
-	pi.registerCommand("clear-on-start", {
-		description: "Toggle auto-clearing scrollback on startup (on/off)",
-		handler: async (args, ctx) => {
-			const s = getSettings();
-			const cur = s.clearOnStart === true;
-			let next: boolean;
-			if (args === "off" || args === "false") next = false;
-			else if (!args || args === "on" || args === "true") next = !cur;
-			else {
-				ctx.ui.notify("Usage: /clear-on-start [on|off]", "error");
-				return;
-			}
-			s.clearOnStart = next;
-			saveSettings(s);
-			ctx.ui.notify(`clear-on-start: ${next ? "ON" : "OFF"}`, "info");
-		},
-	});
-
-	pi.registerCommand("pi-look", {
-		description:
-			"Restore Pi's built-in TUI header, footer, editor, and spinner",
+	pi.registerCommand("htg", {
+		description: "Toggle pi-cc-header enabled/disabled (config preserved)",
 		handler: async (_args, ctx) => {
-			active?.dispose();
-			active = undefined;
-			ctx.ui.setTitle("pi");
-			ctx.ui.setHeader(undefined);
-			ctx.ui.setFooter();
-			ctx.ui.setWorkingIndicator();
-			ctx.ui.setEditorComponent(undefined);
-			ctx.ui.notify("Built-in pi look restored", "info");
+			const s = getSettings();
+			const h = s.ccHeader || {};
+			if (h.disabled) {
+				// Re-enable
+				s.ccHeader = h;
+				h.disabled = false;
+				s.quietStartup = true;
+				saveSettings(s);
+				apply(pi, ctx);
+				ctx.ui.notify("pi-cc-header enabled", "info");
+			} else {
+				// Disable
+				s.ccHeader = h;
+				h.disabled = true;
+				s.quietStartup = false;
+				s.clearOnStart = false;
+				saveSettings(s);
+				active?.dispose();
+				active = undefined;
+				ctx.ui.setTitle("pi");
+				ctx.ui.setHeader(undefined);
+				ctx.ui.setFooter();
+				ctx.ui.setWorkingIndicator();
+				ctx.ui.setEditorComponent(undefined);
+				ctx.ui.notify("pi-cc-header disabled", "info");
+			}
 		},
 	});
 	pi.registerCommand("hl", {
 		description: "Toggle horizontal lines on/off",
 		handler: async (_args, ctx) => {
-			stripeEnabled = !stripeEnabled;
 			const s = getSettings();
+			if ((s.ccHeader || {}).disabled) {
+				ctx.ui.notify("pi-cc-header is disabled, use /htg to enable", "info");
+				return;
+			}
+			stripeEnabled = !stripeEnabled;
 			s.ccHeader = { ...s.ccHeader, lines: stripeEnabled };
 			saveSettings(s);
 			recomputeFrames();
@@ -400,14 +454,19 @@ export default function (pi: ExtensionAPI) {
 	});
 
 	pi.registerCommand("hc", {
-		description: "Set header color: r=red o=orange y=yellow g=green b=blue p=purple w=white",
+		description:
+			"Set header color: r=red o=orange y=yellow g=green b=blue p=purple w=white",
 		handler: async (args, ctx) => {
+			const s = getSettings();
+			if ((s.ccHeader || {}).disabled) {
+				ctx.ui.notify("pi-cc-header is disabled, use /htg to enable", "info");
+				return;
+			}
 			if (!CMAP[args ?? ""]) {
 				ctx.ui.notify(`Colors: ${Object.keys(CMAP).join(" ")}`, "error");
 				return;
 			}
 			logoColorKey = args!;
-			const s = getSettings();
 			s.ccHeader = { ...s.ccHeader, color: args };
 			saveSettings(s);
 			recomputeFrames();
@@ -421,8 +480,12 @@ export default function (pi: ExtensionAPI) {
 	pi.registerCommand("hv", {
 		description: "Toggle version number color follow logo",
 		handler: async (_args, ctx) => {
-			versionColored = (versionColored + 1) % 3;
 			const s = getSettings();
+			if ((s.ccHeader || {}).disabled) {
+				ctx.ui.notify("pi-cc-header is disabled, use /htg to enable", "info");
+				return;
+			}
+			versionColored = (versionColored + 1) % 3;
 			s.ccHeader = { ...s.ccHeader, ver: versionColored };
 			saveSettings(s);
 			const labels = ["OFF", "Pi only", "Pi+ver"];
@@ -433,11 +496,15 @@ export default function (pi: ExtensionAPI) {
 		},
 	});
 
-	pi.registerCommand("hgd", {
+	pi.registerCommand("hg", {
 		description: "Toggle gradient on/off",
 		handler: async (_args, ctx) => {
-			gradientOn = !gradientOn;
 			const s = getSettings();
+			if ((s.ccHeader || {}).disabled) {
+				ctx.ui.notify("pi-cc-header is disabled, use /htg to enable", "info");
+				return;
+			}
+			gradientOn = !gradientOn;
 			s.ccHeader = { ...s.ccHeader, grad: gradientOn };
 			saveSettings(s);
 			recomputeFrames();
@@ -445,6 +512,34 @@ export default function (pi: ExtensionAPI) {
 			active = undefined;
 			apply(pi, ctx);
 			ctx.ui.notify(`Gradient: ${gradientOn ? "ON" : "OFF"}`, "info");
+		},
+	});
+
+	pi.registerCommand("hdf", {
+		description: "Reset pi-cc-header to developer defaults (overwrites config)",
+		handler: async (_args, ctx) => {
+			const s = getSettings();
+			if ((s.ccHeader || {}).disabled) {
+				ctx.ui.notify("pi-cc-header is disabled, use /htg to enable", "info");
+				return;
+			}
+			stripeEnabled = true;
+			logoColorKey = "b";
+			versionColored = 0;
+			gradientOn = true;
+			recomputeFrames();
+			s.ccHeader = {
+				lines: true,
+				color: "b",
+				ver: 0,
+				grad: true,
+				disabled: false,
+			};
+			saveSettings(s);
+			active?.dispose();
+			active = undefined;
+			apply(pi, ctx);
+			ctx.ui.notify("Reset to developer defaults", "info");
 		},
 	});
 }
