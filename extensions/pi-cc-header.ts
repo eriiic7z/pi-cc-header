@@ -22,9 +22,9 @@ const CMAP: Record<string, string> = {
 	o: "38;5;208",
 	y: "38;5;226",
 	g: "32",
+	w: "38;5;15",
 	b: "34",
 	p: "38;5;129",
-	w: "38;5;15",
 };
 // 24-bit RGB gradient: [light→dark] for each color
 const GMAP: Record<string, string[]> = {
@@ -42,6 +42,12 @@ const GMAP: Record<string, string[]> = {
 		"38;2;160;160;10",
 	],
 	g: ["38;2;80;255;80", "38;2;40;220;40", "38;2;20;180;20", "38;2;10;140;10"],
+	w: [
+		"38;2;255;255;255",
+		"38;2;220;220;220",
+		"38;2;180;180;180",
+		"38;2;140;140;140",
+	],
 	b: [
 		"38;2;100;180;255",
 		"38;2;70;160;245",
@@ -53,12 +59,6 @@ const GMAP: Record<string, string[]> = {
 		"38;2;170;70;230",
 		"38;2;140;40;200",
 		"38;2;110;20;160",
-	],
-	w: [
-		"38;2;255;255;255",
-		"38;2;220;220;220",
-		"38;2;180;180;180",
-		"38;2;140;140;140",
 	],
 };
 
@@ -361,12 +361,12 @@ let active: PiHeader | undefined;
 function apply(
 	pi: ExtensionAPI,
 	ctx: ExtensionContext,
-	clearMode: "full" | "viewport" = "full",
+	clearMode: "full" | "viewport" | "none" = "full",
 ) {
 	if (ctx.mode !== "tui") return;
 	if (clearMode === "full") {
 		process.stdout.write("\x1b[2J\x1b[3J\x1b[H");
-	} else {
+	} else if (clearMode === "viewport") {
 		process.stdout.write("\x1b[2J");
 	}
 	ctx.ui.setHeader((tui) => {
@@ -474,7 +474,7 @@ export default function (pi: ExtensionAPI) {
 
 	pi.registerCommand("hc", {
 		description:
-			"Set header color: r=red o=orange y=yellow g=green b=blue p=purple w=white",
+			"Set header color: r=red o=orange y=yellow g=green w=white b=blue p=purple",
 		handler: async (args, ctx) => {
 			const s = getSettings();
 			if ((s.ccHeader || {}).disabled) {
@@ -491,8 +491,8 @@ export default function (pi: ExtensionAPI) {
 			recomputeFrames();
 			active?.dispose();
 			active = undefined;
-			apply(pi, ctx, "viewport");
 			ctx.ui.notify(`Color: ${args}`, "info");
+			apply(pi, ctx, "none");
 		},
 	});
 

@@ -2,7 +2,15 @@
 
 All notable changes to pi-cc-header.
 
-## v0.7.2 (2026-07-13)
+## v0.7.3 (2026-07-14)
+
+### Changed
+
+- CMAP/GMAP color order adjusted to r/o/y/g/w/b/p
+
+### Fixed
+
+- `/hc` command no longer clears input border and status bar
 
 ### Fixed
 
