@@ -18,7 +18,7 @@ Animated Pi logo header for [pi coding agent](https://pi.dev).
 | Command | Description |
 | --- | --- |
 | `/hl` | Toggle IBM-style horizontal stripes |
-| `/hc r/o/y/g/w/b/p` | Set logo color |
+| `/hc c/r/o/y/g/w/b/p` | Set logo color |
 | `/hv` | Cycle version color: OFF → Pi only → Pi+ver |
 | `/hg` | Toggle 24-bit gradient |
 | `/hrl` | Toggle resource list visibility |
@@ -58,7 +58,7 @@ Logo animation adapted from [pi.dev/install.sh](https://pi.dev/install.sh).
 | 命令 | 说明 |
 | --- | --- |
 | `/hl` | 开关 IBM 横线 |
-| `/hc r/o/y/g/w/b/p` | 设置 logo 颜色 |
+| `/hc c/r/o/y/g/w/b/p` | 设置 logo 颜色 |
 | `/hv` | 切换版本号颜色模式 |
 | `/hg` | 开关渐变 |
 | `/hrl` | 切换资源清单显示/隐藏 |

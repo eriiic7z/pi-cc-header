@@ -16,18 +16,20 @@ const LOGO_INTERVAL = 75;
 let stripeEnabled = true;
 let versionColored = 0; // 0=none 1=Pi only 2=Pi+version
 let gradientOn = true;
-let logoColorKey = "b"; // default blue
+let logoColorKey = "c"; // default crab orange
 const CMAP: Record<string, string> = {
+	c: "38;2;217;119;87",
 	r: "31",
 	o: "38;5;208",
 	y: "38;5;226",
-	g: "32",
+	g: "38;2;20;180;20",
 	w: "38;5;15",
-	b: "34",
+	b: "38;2;40;130;220",
 	p: "38;5;129",
 };
 // 24-bit RGB gradient: [light→dark] for each color
 const GMAP: Record<string, string[]> = {
+	c: ["38;2;217;119;87", "38;2;200;100;70", "38;2;170;80;55", "38;2;130;60;40"],
 	r: ["38;2;255;80;80", "38;2;220;40;40", "38;2;180;20;20", "38;2;140;10;10"],
 	o: [
 		"38;2;255;170;50",
@@ -43,10 +45,10 @@ const GMAP: Record<string, string[]> = {
 	],
 	g: ["38;2;80;255;80", "38;2;40;220;40", "38;2;20;180;20", "38;2;10;140;10"],
 	w: [
-		"38;2;255;255;255",
-		"38;2;220;220;220",
-		"38;2;180;180;180",
-		"38;2;140;140;140",
+		"38;2;230;230;210",
+		"38;2;190;190;170",
+		"38;2;140;140;120",
+		"38;2;100;100;85",
 	],
 	b: [
 		"38;2;100;180;255",
@@ -474,7 +476,7 @@ export default function (pi: ExtensionAPI) {
 
 	pi.registerCommand("hc", {
 		description:
-			"Set header color: r=red o=orange y=yellow g=green w=white b=blue p=purple",
+			"Set header color: c=crab r=red o=orange y=yellow g=green w=white b=blue p=purple",
 		handler: async (args, ctx) => {
 			const s = getSettings();
 			if ((s.ccHeader || {}).disabled) {
@@ -543,13 +545,13 @@ export default function (pi: ExtensionAPI) {
 				return;
 			}
 			stripeEnabled = true;
-			logoColorKey = "b";
+			logoColorKey = "c";
 			versionColored = 0;
 			gradientOn = true;
 			recomputeFrames();
 			s.ccHeader = {
 				lines: true,
-				color: "b",
+				color: "c",
 				ver: 0,
 				grad: true,
 				disabled: false,

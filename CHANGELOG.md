@@ -2,6 +2,18 @@
 
 All notable changes to pi-cc-header.
 
+## v0.7.4 (2026-07-14)
+
+### Added
+
+- Crab orange `c` color (Claude Code accent), now the default
+
+### Changed
+
+- Green CMAP aligned to GMAP L3 (24-bit RGB)
+- Blue CMAP aligned to GMAP L3 (24-bit RGB)
+- White GMAP gradient re-centered on warm white base
+
 ## v0.7.3 (2026-07-14)
 
 ### Changed

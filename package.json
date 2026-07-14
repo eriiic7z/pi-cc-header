@@ -1,6 +1,6 @@
 {
   "name": "pi-cc-header",
-  "version": "0.7.3",
+  "version": "0.7.4",
   "description": "Animated Pi logo header with toggleable IBM-style stripes, 7-color palette, and 24-bit gradient",
   "type": "module",
   "keywords": ["pi-package", "pi", "tui", "header", "animation"],
