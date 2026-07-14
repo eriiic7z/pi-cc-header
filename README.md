@@ -4,6 +4,8 @@
 
 Animated Pi logo header for [pi coding agent](https://pi.dev).
 
+![pi-cc-header](assets/screenshot.png)
+
 ## Features
 
 - 14-frame pixel-animated Pi logo
