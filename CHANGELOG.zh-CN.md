@@ -1,5 +1,31 @@
 # 变更日志
 
+## v0.8.0 (2026-07-16)
+
+### 新增
+
+- Clawd 螃蟹红 `c` 颜色 — sRGB(251, 73, 52)，Claude Code 小螃蟹的明亮橙色
+- Anthropic 品牌橙 `a` 颜色 — rgb(217, 119, 87)（原 `c` 键改为品牌色标识；现为默认色）
+- 九色调色板（c a r o y g w b p）
+
+### 变更
+
+- `/hl` 改名为 `/hi` — 提示改为「开关 IBM 横线」
+- `/hg` 改名为 `/hm` — 提示改为「开关 Minecraft 风格」
+- `/hc` 调色板更新：c=clawd 螃蟹红 a=anthropic 品牌橙 r=red 红 o=orange 橙 y=yellow 黄 g=green 绿 w=white 白 b=blue 蓝 p=purple 紫
+- `/hdf` 开发者默认配置：颜色 → `c`，版本号颜色 → Pi+ver
+- README 功能描述：改为「14 帧 Minecraft 风格像素 Pi logo 动画」
+- README：在功能与命令之间插入演示 GIF 动图
+- package.json keywords：添加 `extension` 以在 pi.dev 搜索列表显示
+- package.json files：添加 `assets` 使截图和 GIF 在 npm 与 pi 官网正常渲染
+
+### 修复
+
+- `/hv`、`/hi`、`/hm`、`/hdf` 不再重复输出 header 和对话 — `clearMode` 从 `"viewport"` 改为 `"none"`
+- `/hrl` 不再在 `ctx.reload()` 前重复创建 header
+
+---
+
 ## v0.7.4 (2026-07-14)
 
 ### 新增

@@ -2,6 +2,32 @@
 
 All notable changes to pi-cc-header.
 
+## v0.8.0 (2026-07-16)
+
+### Added
+
+- Clawd crab red `c` color — sRGB(251, 73, 52), the brighter Claude Code mascot orange
+- Anthropic brand orange `a` color — rgb(217, 119, 87) (replaces the former `c` as the brand color key; now the default)
+- 9-color palette (c a r o y g w b p)
+
+### Changed
+
+- `/hl` renamed to `/hi` — description: "Toggle IBM-style on/off"
+- `/hg` renamed to `/hm` — description: "Toggle Minecraft-style on/off"
+- `/hc` command palette updated: c=clawd a=anthropic r=red o=orange y=yellow g=green w=white b=blue p=purple
+- `/hdf` developer defaults: color → `c`, version color → Pi+ver
+- README Features: "14-frame Minecraft-style pixel animated Pi logo"
+- README: added animated demo GIF between Features and Commands
+- package.json keywords: add "extension" for pi.dev search listing
+- package.json files: add "assets" so screenshots render on npm and pi.dev
+
+### Fixed
+
+- `/hv`, `/hi`, `/hm`, `/hdf` no longer duplicate the header and conversation — `clearMode` switched from `"viewport"` to `"none"`
+- `/hrl` no longer double-creates the header before `ctx.reload()`
+
+---
+
 ## v0.7.4 (2026-07-14)
 
 ### Added

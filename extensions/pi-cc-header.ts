@@ -16,9 +16,9 @@ const LOGO_INTERVAL = 75;
 let stripeEnabled = true;
 let versionColored = 0; // 0=none 1=Pi only 2=Pi+version
 let gradientOn = true;
-let logoColorKey = "c"; // default crab orange
+let logoColorKey = "a"; // default anthropic brand orange
 const CMAP: Record<string, string> = {
-	c: "38;2;217;119;87",
+	a: "38;2;217;119;87",
 	r: "31",
 	o: "38;5;208",
 	y: "38;5;226",
@@ -26,10 +26,11 @@ const CMAP: Record<string, string> = {
 	w: "38;5;15",
 	b: "38;2;40;130;220",
 	p: "38;5;129",
+	c: "38;2;251;73;52",
 };
 // 24-bit RGB gradient: [light→dark] for each color
 const GMAP: Record<string, string[]> = {
-	c: ["38;2;217;119;87", "38;2;200;100;70", "38;2;170;80;55", "38;2;130;60;40"],
+	a: ["38;2;217;119;87", "38;2;200;100;70", "38;2;170;80;55", "38;2;130;60;40"],
 	r: ["38;2;255;80;80", "38;2;220;40;40", "38;2;180;20;20", "38;2;140;10;10"],
 	o: [
 		"38;2;255;170;50",
@@ -62,6 +63,7 @@ const GMAP: Record<string, string[]> = {
 		"38;2;140;40;200",
 		"38;2;110;20;160",
 	],
+	c: ["38;2;251;73;52", "38;2;220;60;40", "38;2;190;45;30", "38;2;155;30;20"],
 };
 
 /* ── Pi 官方 Logo 动画（提取自 pi.dev/install.sh）── */
@@ -454,8 +456,8 @@ export default function (pi: ExtensionAPI) {
 			}
 		},
 	});
-	pi.registerCommand("hl", {
-		description: "Toggle horizontal lines on/off",
+	pi.registerCommand("hi", {
+		description: "Toggle IBM-style on/off",
 		handler: async (_args, ctx) => {
 			const s = getSettings();
 			if ((s.ccHeader || {}).disabled) {
@@ -469,14 +471,14 @@ export default function (pi: ExtensionAPI) {
 			// Rebuild header to pick up new frames
 			active?.dispose();
 			active = undefined;
-			apply(pi, ctx, "viewport");
+			apply(pi, ctx, "none");
 			ctx.ui.notify(`Lines: ${stripeEnabled ? "ON" : "OFF"}`, "info");
 		},
 	});
 
 	pi.registerCommand("hc", {
 		description:
-			"Set header color: c=crab r=red o=orange y=yellow g=green w=white b=blue p=purple",
+			"Set header color: c=clawd a=anthropic r=red o=orange y=yellow g=green w=white b=blue p=purple",
 		handler: async (args, ctx) => {
 			const s = getSettings();
 			if ((s.ccHeader || {}).disabled) {
@@ -512,13 +514,13 @@ export default function (pi: ExtensionAPI) {
 			const labels = ["OFF", "Pi only", "Pi+ver"];
 			active?.dispose();
 			active = undefined;
-			apply(pi, ctx, "viewport");
+			apply(pi, ctx, "none");
 			ctx.ui.notify(`Version color: ${labels[versionColored]}`, "info");
 		},
 	});
 
-	pi.registerCommand("hg", {
-		description: "Toggle gradient on/off",
+	pi.registerCommand("hm", {
+		description: "Toggle Minecraft-style on/off",
 		handler: async (_args, ctx) => {
 			const s = getSettings();
 			if ((s.ccHeader || {}).disabled) {
@@ -531,7 +533,7 @@ export default function (pi: ExtensionAPI) {
 			recomputeFrames();
 			active?.dispose();
 			active = undefined;
-			apply(pi, ctx, "viewport");
+			apply(pi, ctx, "none");
 			ctx.ui.notify(`Gradient: ${gradientOn ? "ON" : "OFF"}`, "info");
 		},
 	});
@@ -546,20 +548,20 @@ export default function (pi: ExtensionAPI) {
 			}
 			stripeEnabled = true;
 			logoColorKey = "c";
-			versionColored = 0;
+			versionColored = 2;
 			gradientOn = true;
 			recomputeFrames();
 			s.ccHeader = {
 				lines: true,
 				color: "c",
-				ver: 0,
+				ver: 2,
 				grad: true,
 				disabled: false,
 			};
 			saveSettings(s);
 			active?.dispose();
 			active = undefined;
-			apply(pi, ctx, "viewport");
+			apply(pi, ctx, "none");
 			ctx.ui.notify("Reset to developer defaults", "info");
 		},
 	});
@@ -574,9 +576,6 @@ export default function (pi: ExtensionAPI) {
 			}
 			s.rsl = s.rsl === false ? true : false;
 			saveSettings(s);
-			active?.dispose();
-			active = undefined;
-			apply(pi, ctx, "viewport");
 			ctx.ui.notify(
 				`Resource list: ${s.rsl !== false ? "HIDDEN" : "VISIBLE"}`,
 				"info",

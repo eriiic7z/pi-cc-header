@@ -1,16 +1,16 @@
 {
   "name": "pi-cc-header",
-  "version": "0.7.4",
+  "version": "0.8.0",
   "description": "Animated Pi logo header with toggleable IBM-style stripes, 7-color palette, and 24-bit gradient",
   "type": "module",
-  "keywords": ["pi-package", "pi", "tui", "header", "animation"],
+  "keywords": ["pi-package", "pi", "extension", "tui", "header", "animation"],
   "license": "MIT",
   "homepage": "https://github.com/eriiic7z/pi-cc-header#readme",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/eriiic7z/pi-cc-header.git"
   },
-  "files": ["extensions", "README.md", "LICENSE"],
+  "files": ["extensions", "README.md", "LICENSE", "assets"],
   "pi": {
     "extensions": ["./extensions"]
   },
