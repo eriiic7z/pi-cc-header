@@ -2,6 +2,12 @@
 
 All notable changes to pi-cc-header.
 
+## v0.8.2 (2026-07-16)
+
+### Changed
+
+- package.json description: rewritten for Claude Code–style positioning — 9-color palette, IBM stripes, and Minecraft gradient themes
+
 ## v0.8.1 (2026-07-16)
 
 ### Fixed
@@ -57,9 +63,6 @@ All notable changes to pi-cc-header.
 ### Fixed
 
 - `/hc` command no longer clears input border and status bar
-
-### Fixed
-
 - Style command switching no longer clears input border and status bar — `apply()` now uses viewport-only clear for commands, full clear only on session start
 
 ## v0.7.1 (2026-07-13)
