@@ -12,7 +12,7 @@ Claude Code–style startup header for [pi coding agent](https://pi.dev).
 pi install npm:pi-cc-header
 ```
 
-Takes effect on your **next session (window, same below) or after `/reload`**.
+Takes effect on your **next session (window, same below) or `/reload`**.
 
 ## Features
 
@@ -38,11 +38,11 @@ Takes effect on your **next session (window, same below) or after `/reload`**.
 | `/hdf` | Reset to developer defaults | Immediate |
 | `/htg` | Enable / disable pi-cc-header | Next session |
 
-### Enabling, disabling, and resetting
+### Disabling and resetting
 
-pi-cc-header is enabled by default on first install. Disabling it with `/htg` locks all style commands (except `/htg` itself) to prevent blind configuration. Run `/htg` again to re-enable with your previous config — **changes take effect the next session**.
+Use `/hdf` to reset all settings to developer defaults (Clawd crab red). Changes take effect immediately. **This does not save your current config** — you will need to reconfigure from scratch.
 
-Use `/hdf` to reset all settings to developer defaults (Clawd crab red). **This overwrites your config immediately with no backup** — you will need to reconfigure from scratch.
+Disabling pi-cc-header with `/htg` locks all style commands (except `/htg` itself) to prevent blind configuration. Run `/htg` again to re-enable with your previous config — **changes take effect the next session**.
 
 ## Auto behavior
 
@@ -67,7 +67,7 @@ Logo animation adapted from [pi.dev/install.sh](https://pi.dev/install.sh).
 pi install npm:pi-cc-header
 ```
 
-安装后在**下一次会话（窗口，下同）或`/reload`后**生效。
+安装后在**下一次会话（窗口，下同）或`/reload`**生效。
 
 ## 功能
 
@@ -95,8 +95,8 @@ pi install npm:pi-cc-header
 
 ### 禁用与重置
 
-使用`/htg`禁用 pi-cc-header 后，所有样式命令会被锁定无法使用（`/htg`除外），防止盲操配置。重新执行 `/htg` 即可恢复禁用前的配置。**更改将在下一次会话生效**。
 使用`/hdf`可将用户配置恢复为开发者默认配置（Clawd 螃蟹红），更改即时生效。**此命令不会保存用户配置，重置后用户需重新进行配置**。
+使用`/htg`禁用 pi-cc-header 后，所有样式命令会被锁定无法使用（`/htg`除外），防止盲操配置。重新执行 `/htg` 即可恢复禁用前的配置。**更改将在下一次会话生效**。
 
 ## 自动行为
 

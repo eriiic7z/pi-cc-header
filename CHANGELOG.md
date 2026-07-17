@@ -2,6 +2,12 @@
 
 All notable changes to pi-cc-header.
 
+## v0.8.5 (2026-07-17)
+
+### Changed
+
+- README: restructure disabling and resetting guide, align Chinese and English, reorder `/hdf` and `/htg`
+
 ## v0.8.4 (2026-07-17)
 
 ### Added
