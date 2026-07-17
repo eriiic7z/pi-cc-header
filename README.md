@@ -2,36 +2,39 @@
 
 [中文](#中文)
 
-Animated Pi logo header for [pi coding agent](https://pi.dev).
+Claude Code–style startup header for [pi coding agent](https://pi.dev).
 
 ![pi-cc-header](assets/screenshot.png)
 
 ## Features
 
-- 14-frame Minecraft-style pixel animated Pi logo
-- 9-color palette including Anthropic brand orange and Clawd crab red
-- 4-level 24-bit true-color gradient
+- 14-frame Pi logo animation
+- Session info row: version, model, thinking level, extensions, skills, cwd
+- 9-color palette: Anthropic brand orange, Clawd crab red, and more
+- Version number coloring
 - IBM-style horizontal stripes
-- Version number color modes
-- Displays Pi version, model, thinking level, extension/skill counts, and cwd
+- Minecraft-style pixel theme and 4-level 24-bit true-color gradient
+- Startup resource list visibility control
 
 ![pi-cc-header demo](assets/demo.gif)
 
 ## Commands
 
-| Command | Description |
-| --- | --- |
-| `/hi` | Toggle IBM-style on/off |
-| `/hc c/a/r/o/y/g/w/b/p` | Set logo color: c=clawd a=anthropic r=red o=orange y=yellow g=green w=white b=blue p=purple |
-| `/hv` | Cycle version color: OFF → Pi only → Pi+ver |
-| `/hm` | Toggle Minecraft-style on/off |
-| `/hrl` | Toggle resource list visibility |
-| `/htg` | Enable / disable pi-cc-header |
-| `/hdf` | Reset to developer defaults |
+| Command | Description | Takes effect |
+| --- | --- | --- |
+| `/hc c/a/r/o/y/g/w/b/p` | Set logo color: c=clawd a=anthropic r=red o=orange y=yellow g=green w=white b=blue p=purple | Immediate |
+| `/hv` | Cycle version color: OFF → Pi only → Pi+ver | Immediate |
+| `/hi` | Toggle IBM-style on/off | Immediate |
+| `/hm` | Toggle Minecraft-style on/off | Immediate |
+| `/hrl` | Toggle resource list visibility | Next session |
+| `/hdf` | Reset to developer defaults | Immediate |
+| `/htg` | Enable / disable pi-cc-header | Next session |
 
-### Disabled state
+### Enabling, disabling, and resetting
 
-When pi-cc-header is disabled (`/htg`), all style commands are locked to prevent blind configuration. Use `/htg` again to re-enable. Changes apply on the next session.
+pi-cc-header is enabled by default on first install. Disabling it with `/htg` locks all style commands (except `/htg` itself) to prevent blind configuration. Run `/htg` again to re-enable with your previous config — **changes take effect the next session**.
+
+Use `/hdf` to reset all settings to developer defaults (Clawd crab red). **This overwrites your config immediately with no backup** — you will need to reconfigure from scratch.
 
 ## Auto behavior
 
@@ -46,36 +49,38 @@ Logo animation adapted from [pi.dev/install.sh](https://pi.dev/install.sh).
 
 ## 中文
 
-[pi coding agent](https://pi.dev) 的 Pi logo 动画 header。
+[pi coding agent](https://pi.dev) 的 Claude Code 风格启动头部。
 
 ![pi-cc-header](assets/screenshot.png)
 
 ## 功能
 
-- 14 帧 Minecraft 风格像素 Pi logo 动画
-- 九色调色板：含 Anthropic 品牌橙与 Clawd 螃蟹红
-- 4 级 24-bit 真彩色渐变
+- 14 帧 Pi logo 动画
+- 会话信息行：版本、模型、思考级别、扩展、技能、当前目录
+- 九色调色板：Anthropic 品牌橙、Clawd 螃蟹红等
+- 版本号颜色设定
 - IBM 风格水平横线
-- 版本号颜色模式
-- 显示 Pi 版本、模型、思考级别、扩展/技能数量、当前目录
+- Minecraft 风格像素主题，4 级 24-bit 真彩色渐变
+- 启动时资源列表可见性控制
 
 ![pi-cc-header 演示](assets/demo.gif)
 
 ## 命令
 
-| 命令 | 说明 |
-| --- | --- |
-| `/hi` | 开关 IBM 横线 |
-| `/hc c/a/r/o/y/g/w/b/p` | 设置 logo 颜色：c=clawd 螃蟹红 a=anthropic 品牌橙 r=red 红 o=orange 橙 y=yellow 黄 g=green 绿 w=white 白 b=blue 蓝 p=purple 紫 |
-| `/hv` | 切换版本号颜色模式 |
-| `/hm` | 开关 Minecraft 风格 |
-| `/hrl` | 切换资源清单显示/隐藏 |
-| `/htg` | 启用 / 禁用 pi-cc-header |
-| `/hdf` | 恢复开发者默认配置 |
+| 命令 | 说明 | 生效方式 |
+| --- | --- | --- |
+| `/hc c/a/r/o/y/g/w/b/p` | 设置 logo 颜色：c=clawd 螃蟹红 a=anthropic 品牌橙 r=red 红 o=orange 橙 y=yellow 黄 g=green 绿 w=white 白 b=blue 蓝 p=purple 紫 | 即时生效 |
+| `/hv` | 切换版本号颜色模式 | 即时生效 |
+| `/hi` | 开关 IBM 横线 | 即时生效 |
+| `/hm` | 开关 Minecraft 风格 | 即时生效 |
+| `/hrl` | 切换资源清单显示/隐藏 | 下一次会话生效 |
+| `/hdf` | 恢复开发者默认配置 | 即时生效 |
+| `/htg` | 启用 / 禁用 pi-cc-header | 下一次会话生效 |
 
-### 禁用状态
+### 启用禁用与重置
 
-pi-cc-header 被禁用后，所有样式命令会被锁定，防止盲操配置。重新执行 `/htg` 即可恢复。更改将在下一次会话生效。
+首次安装默认自动启用。使用`/htg`禁用 pi-cc-header 后，所有样式命令会被锁定无法使用（`/htg`除外），防止盲操配置。重新执行 `/htg` 即可恢复禁用前的配置。**更改将在下一次会话生效**。
+使用`/hdf`可将用户配置恢复为开发者默认配置（Clawd 螃蟹红），更改即时生效。**此命令不会保存用户配置，重置后用户需重新进行配置**。
 
 ## 自动行为
 

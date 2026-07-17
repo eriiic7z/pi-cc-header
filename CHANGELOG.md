@@ -2,6 +2,12 @@
 
 All notable changes to pi-cc-header.
 
+## v0.8.3 (2026-07-16)
+
+### Changed
+
+- README: full restructure — clarified project positioning, reorganized and reworded Features, added Takes effect column to Commands, expanded enable/disable/reset guide
+
 ## v0.8.2 (2026-07-16)
 
 ### Changed
