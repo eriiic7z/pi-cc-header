@@ -6,6 +6,14 @@ Claude Code–style startup header for [pi coding agent](https://pi.dev).
 
 ![pi-cc-header](assets/screenshot.png)
 
+## Install
+
+```bash
+pi install npm:pi-cc-header
+```
+
+Takes effect on your **next session (window, same below) or after `/reload`**.
+
 ## Features
 
 - 14-frame Pi logo animation
@@ -53,6 +61,14 @@ Logo animation adapted from [pi.dev/install.sh](https://pi.dev/install.sh).
 
 ![pi-cc-header](assets/screenshot.png)
 
+## 安装
+
+```bash
+pi install npm:pi-cc-header
+```
+
+安装后在**下一次会话（窗口，下同）或`/reload`后**生效。
+
 ## 功能
 
 - 14 帧 Pi logo 动画
@@ -77,9 +93,9 @@ Logo animation adapted from [pi.dev/install.sh](https://pi.dev/install.sh).
 | `/hdf` | 恢复开发者默认配置 | 即时生效 |
 | `/htg` | 启用 / 禁用 pi-cc-header | 下一次会话生效 |
 
-### 启用禁用与重置
+### 禁用与重置
 
-首次安装默认自动启用。使用`/htg`禁用 pi-cc-header 后，所有样式命令会被锁定无法使用（`/htg`除外），防止盲操配置。重新执行 `/htg` 即可恢复禁用前的配置。**更改将在下一次会话生效**。
+使用`/htg`禁用 pi-cc-header 后，所有样式命令会被锁定无法使用（`/htg`除外），防止盲操配置。重新执行 `/htg` 即可恢复禁用前的配置。**更改将在下一次会话生效**。
 使用`/hdf`可将用户配置恢复为开发者默认配置（Clawd 螃蟹红），更改即时生效。**此命令不会保存用户配置，重置后用户需重新进行配置**。
 
 ## 自动行为

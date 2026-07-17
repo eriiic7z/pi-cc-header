@@ -2,6 +2,12 @@
 
 All notable changes to pi-cc-header.
 
+## v0.8.4 (2026-07-17)
+
+### Added
+
+- README: added Install section with install command and activation timing
+
 ## v0.8.3 (2026-07-16)
 
 ### Changed
