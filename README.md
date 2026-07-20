@@ -4,7 +4,7 @@
 
 Claude Code–style startup header for [pi coding agent](https://pi.dev).
 
-![pi-cc-header](assets/screenshot.png)
+![pi-cc-header](https://raw.githubusercontent.com/eriiic7z/pi-cc-header/main/assets/screenshot.png)
 
 ## Install
 
@@ -24,7 +24,7 @@ Takes effect on your **next session (window, same below)** or **`/reload`**.
 - Minecraft-style pixel theme and 4-level 24-bit true-color gradient
 - Startup resource list visibility control
 
-![pi-cc-header demo](assets/demo.gif)
+![pi-cc-header demo](https://raw.githubusercontent.com/eriiic7z/pi-cc-header/main/assets/demo.gif)
 
 ## Commands
 
@@ -60,7 +60,7 @@ Logo animation adapted from [pi.dev/install.sh](https://pi.dev/install.sh).
 
 [pi coding agent](https://pi.dev) 的 Claude Code 风格启动头部。
 
-![pi-cc-header](assets/screenshot.png)
+![pi-cc-header](https://raw.githubusercontent.com/eriiic7z/pi-cc-header/main/assets/screenshot.png)
 
 ## 安装
 
@@ -80,7 +80,7 @@ pi install npm:pi-cc-header
 - Minecraft 风格像素主题，4 级 24-bit 真彩色渐变
 - 启动时资源列表可见性控制
 
-![pi-cc-header 演示](assets/demo.gif)
+![pi-cc-header 演示](https://raw.githubusercontent.com/eriiic7z/pi-cc-header/main/assets/demo.gif)
 
 ## 命令
 

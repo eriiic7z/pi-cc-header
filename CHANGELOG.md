@@ -4,6 +4,12 @@
 
 All notable changes to pi-cc-header.
 
+## v0.9.1 (2026-07-20)
+
+### Changed
+
+- Excluded `assets/` from npm package, README images now reference GitHub raw URLs — package size 3.5MB → 8.9KB
+
 ## v0.9.0 (2026-07-20)
 
 ### Added
@@ -242,6 +248,12 @@ All notable changes to pi-cc-header.
 ---
 
 ## 中文
+
+## v0.9.1 (2026-07-20)
+
+### 变更
+
+- npm 包排除 `assets/`，README 图片改用 GitHub raw URL，包体积从 3.5MB 降至 8.9KB
 
 ## v0.9.0 (2026-07-20)
 
