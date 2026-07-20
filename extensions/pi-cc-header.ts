@@ -136,6 +136,7 @@ const LOGO_FRAMES: LogoFrame[] = [
 ];
 
 const colorCell = (color: LogoColor, bc: (s: string) => string): string => {
+	const cg = (n: number) => GMAP[logoColorKey]?.[n] ?? "34";
 	switch (color) {
 		case "cyan":
 			return "\x1b[36m██\x1b[39m";
@@ -153,21 +154,15 @@ const colorCell = (color: LogoColor, bc: (s: string) => string): string => {
 		case "logoStripe":
 			return `\x1b[${CMAP[logoColorKey]}m──\x1b[39m`;
 		case "l1":
-			return `\x1b[${GMAP[logoColorKey]?.[0] ?? "34"}m██\x1b[39m`;
 		case "l2":
-			return `\x1b[${GMAP[logoColorKey]?.[1] ?? "34"}m██\x1b[39m`;
 		case "l3":
-			return `\x1b[${GMAP[logoColorKey]?.[2] ?? "34"}m██\x1b[39m`;
 		case "l4":
-			return `\x1b[${GMAP[logoColorKey]?.[3] ?? "34"}m██\x1b[39m`;
+			return `\x1b[${cg(+color[1] - 1)}m██\x1b[39m`;
 		case "s1":
-			return `\x1b[${GMAP[logoColorKey]?.[0] ?? "34"}m──\x1b[39m`;
 		case "s2":
-			return `\x1b[${GMAP[logoColorKey]?.[1] ?? "34"}m──\x1b[39m`;
 		case "s3":
-			return `\x1b[${GMAP[logoColorKey]?.[2] ?? "34"}m──\x1b[39m`;
 		case "s4":
-			return `\x1b[${GMAP[logoColorKey]?.[3] ?? "34"}m──\x1b[39m`;
+			return `\x1b[${cg(+color[1] - 1)}m──\x1b[39m`;
 		case "brand":
 			return bc("██");
 		default:
@@ -256,168 +251,116 @@ function padRight(text: string, width: number): string {
 	return clipped + " ".repeat(Math.max(0, width - visibleWidth(clipped)));
 }
 
-/* ── 统一扫描 node_modules 下所有 pi package ── */
-interface PiPackage {
-	pkgDir: string; // absolute dir of the package
-	meta: Record<string, any>; // parsed package.json
-}
-
-function listPiPackages(home: string): PiPackage[] {
-	const result: PiPackage[] = [];
-	const root = join(home, ".pi", "agent", "npm", "node_modules");
-	if (!existsSync(root)) return result;
-
-	for (const name of readdirSync(root)) {
-		if (name.startsWith(".")) continue;
-		const full = join(root, name);
-		if (name.startsWith("@")) {
-			// scoped package – walk one level deeper
-			let subs: string[];
-			try {
-				subs = readdirSync(full);
-			} catch {
-				continue;
-			}
-			for (const sub of subs) {
-				const spj = join(full, sub, "package.json");
-				if (!existsSync(spj)) continue;
-				try {
-					const sm = JSON.parse(readFileSync(spj, "utf-8"));
-					if (sm.pi) result.push({ pkgDir: join(full, sub), meta: sm });
-				} catch {}
-			}
-			continue;
-		}
-		const pj = join(full, "package.json");
-		if (!existsSync(pj)) continue;
-		try {
-			const m = JSON.parse(readFileSync(pj, "utf-8"));
-			if (m.pi) result.push({ pkgDir: full, meta: m });
-		} catch {}
-	}
-	return result;
-}
-
-function resolvePiPath(pkgDir: string, entry: string): string {
-	let dir = join(pkgDir, entry);
-	// Normalise broken relative paths like "../../skills" back into the pkg.
-	if (!existsSync(dir)) {
-		const basename = entry.replace(/^(\.\.?\/)+/, "");
-		dir = join(pkgDir, basename);
-	}
-	return existsSync(dir) ? dir : "";
-}
-
 /* ── 各项统计 ── */
-function countExtensions(home: string): { installed: number; residue: number } {
-	// installed = packages in settings.json
-	let installed = 0;
-	try {
-		const s = JSON.parse(
-			readFileSync(join(home, ".pi", "agent", "settings.json"), "utf-8"),
-		);
-		if (Array.isArray(s.packages)) installed = s.packages.length;
-	} catch {}
-	// residue = pi packages in node_modules NOT in settings.json
-	const pkgNames = new Set<string>();
-	for (const p of listPiPackages(home)) {
-		const parts = p.pkgDir.split("/");
-		// "@scope/pkg"  or  "pkg"
-		const name = parts[parts.length - 2]?.startsWith("@")
-			? parts.slice(-2).join("/")
-			: parts[parts.length - 1];
-		pkgNames.add(name);
-	}
-	// Convert settings.json "npm:name" → "name"
-	const settingsNames = new Set<string>();
-	try {
-		const s = JSON.parse(
-			readFileSync(join(home, ".pi", "agent", "settings.json"), "utf-8"),
-		);
-		if (Array.isArray(s.packages)) {
-			for (const entry of s.packages) {
-				const name = String(entry).replace(/^npm:/, "");
-				settingsNames.add(name);
-			}
-		}
-	} catch {}
-	let residue = 0;
-	for (const n of pkgNames) {
-		if (!settingsNames.has(n)) residue++;
-	}
-	return { installed, residue };
-}
-
-function countPrompts(home: string): number {
-	const seen = new Set<string>();
-	for (const p of listPiPackages(home)) {
-		const entries = p.meta.pi?.prompts;
-		if (!Array.isArray(entries)) continue;
-		for (const entry of entries) {
-			const dir = resolvePiPath(p.pkgDir, entry);
-			if (!dir) continue;
-			for (const e of readdirSync(dir)) {
-				if (e.endsWith(".md")) seen.add(e.slice(0, -3));
-			}
-		}
-	}
-	return seen.size;
-}
-
-function countPkgSkills(home: string): number {
-	const seen = new Set<string>();
-	for (const p of listPiPackages(home)) {
-		const entries = p.meta.pi?.skills;
-		if (!Array.isArray(entries)) continue;
-		for (const entry of entries) {
-			const dir = resolvePiPath(p.pkgDir, entry);
-			if (!dir) continue;
-			for (const e of readdirSync(dir, { withFileTypes: true })) {
-				if (e.isDirectory()) seen.add(join(dir, e.name));
-				else if (e.name.endsWith(".md")) seen.add(join(dir, e.name));
-			}
-		}
-	}
-	return seen.size;
-}
-
-function countSkills(home: string, cwd: string): number {
-	const dirs = new Set<string>();
-	const defaults = [
-		join(home, ".agents", "skills"),
-		join(cwd, ".agents", "skills"),
-		join(home, ".pi", "agent", "skills"),
-		join(cwd, ".pi", "skills"),
-	];
-	for (const d of defaults) {
-		if (!existsSync(d)) continue;
-		for (const e of readdirSync(d, { withFileTypes: true })) {
-			if (e.isDirectory()) dirs.add(join(d, e.name));
-			else if (e.name.endsWith(".md")) dirs.add(join(d, e.name));
-		}
-	}
-	return dirs.size;
-}
-
-function detectAgents(home: string, cwd: string): string {
-	const global = existsSync(join(home, ".pi", "agent", "AGENTS.md"));
-	const project =
-		existsSync(join(cwd, "AGENTS.md")) ||
-		existsSync(join(cwd, ".pi", "AGENTS.md"));
-	if (global && project) return "Aa";
-	if (global) return "A";
-	if (project) return "a";
-	return "";
-}
-
 function computeStats(ctx: ExtensionContext) {
 	const home = process.env.HOME ?? "";
+	const root = join(home, ".pi", "agent", "npm", "node_modules");
+	const settingsPath = join(home, ".pi", "agent", "settings.json");
+
+	let settingsPackages: string[] = [];
+	try {
+		const s = JSON.parse(readFileSync(settingsPath, "utf-8"));
+		if (Array.isArray(s.packages)) settingsPackages = s.packages;
+	} catch {
+		console.warn("pi-cc-header: failed to read settings.json");
+	}
+	const settingsNames = new Set(
+		settingsPackages.map((p) => String(p).replace(/^npm:/, "")),
+	);
+	const installed = settingsPackages.length;
+	let residue = 0;
+	let prompts = 0;
+	let pkgSkills = 0;
+
+	function scanPkg(m: any, pkgDir: string, pkgName: string) {
+		if (!m.pi) return;
+		if (!settingsNames.has(pkgName)) residue++;
+		if (Array.isArray(m.pi.prompts)) {
+			for (const e of m.pi.prompts) {
+				let d = join(pkgDir, e);
+				if (!existsSync(d)) d = join(pkgDir, e.replace(/^(\.\.?\/)+/, ""));
+				if (existsSync(d))
+					prompts += readdirSync(d).filter((f: string) =>
+						f.endsWith(".md"),
+					).length;
+			}
+		}
+		if (Array.isArray(m.pi.skills)) {
+			for (const e of m.pi.skills) {
+				let d = join(pkgDir, e);
+				if (!existsSync(d)) d = join(pkgDir, e.replace(/^(\.\.?\/)+/, ""));
+				if (existsSync(d))
+					pkgSkills += readdirSync(d, { withFileTypes: true }).filter(
+						(f) => f.isDirectory() || f.name.endsWith(".md"),
+					).length;
+			}
+		}
+	}
+
+	if (existsSync(root)) {
+		for (const name of readdirSync(root)) {
+			if (name.startsWith(".")) continue;
+			if (name.startsWith("@")) {
+				let subs: string[];
+				try {
+					subs = readdirSync(join(root, name));
+				} catch {
+					continue;
+				}
+				for (const sub of subs) {
+					const pj = join(root, name, sub, "package.json");
+					if (!existsSync(pj)) continue;
+					try {
+						const m = JSON.parse(readFileSync(pj, "utf-8"));
+						scanPkg(m, join(root, name, sub), `${name}/${sub}`);
+					} catch {
+						console.warn("pi-cc-header: failed to parse", pj);
+					}
+				}
+				continue;
+			}
+			const pj = join(root, name, "package.json");
+			if (!existsSync(pj)) continue;
+			try {
+				const m = JSON.parse(readFileSync(pj, "utf-8"));
+				scanPkg(m, join(root, name), name);
+			} catch {
+				console.warn("pi-cc-header: failed to parse", pj);
+			}
+		}
+	}
+
+	let skills = 0;
+	for (const d of [
+		join(home, ".agents", "skills"),
+		join(ctx.cwd, ".agents", "skills"),
+		join(home, ".pi", "agent", "skills"),
+		join(ctx.cwd, ".pi", "skills"),
+	]) {
+		if (!existsSync(d)) continue;
+		for (const e of readdirSync(d, { withFileTypes: true })) {
+			if (e.isDirectory() || e.name.endsWith(".md")) skills++;
+		}
+	}
+
+	const globalAgents = existsSync(join(home, ".pi", "agent", "AGENTS.md"));
+	const projectAgents =
+		existsSync(join(ctx.cwd, "AGENTS.md")) ||
+		existsSync(join(ctx.cwd, ".pi", "AGENTS.md"));
+
 	return {
-		extensions: countExtensions(home),
-		skills: countSkills(home, ctx.cwd),
-		pkgSkills: countPkgSkills(home),
-		prompts: countPrompts(home),
-		agents: detectAgents(home, ctx.cwd),
+		extensions: { installed, residue },
+		skills,
+		pkgSkills,
+		prompts,
+		agents:
+			globalAgents && projectAgents
+				? "Aa"
+				: globalAgents
+					? "A"
+					: projectAgents
+						? "a"
+						: "",
 	};
 }
 
@@ -539,28 +482,49 @@ export default function (pi: ExtensionAPI) {
 	const saveSettings = (s: Record<string, any>) =>
 		writeFileSync(settingsPath, JSON.stringify(s, null, 2) + "\n", "utf-8");
 
+	// Shared handler helper for toggle commands
+	const modifyConfig = (
+		ctx: ExtensionContext,
+		update: (h: Record<string, any>, s: Record<string, any>) => string | null,
+	) => {
+		const s = getSettings();
+		const h = s.ccHeader || {};
+		if (h.disabled) {
+			ctx.ui.notify("pi-cc-header is disabled, use /htg to enable", "info");
+			return;
+		}
+		const msg = update(h, s);
+		if (msg === null) return;
+		s.ccHeader = h;
+		saveSettings(s);
+		recomputeFrames();
+		active?.dispose();
+		active = undefined;
+		apply(pi, ctx, "none");
+		ctx.ui.notify(msg, "info");
+	};
+
 	pi.on("session_start", (_event, ctx) => {
 		const s = getSettings();
 		const h = s.ccHeader || {};
+		if (h.disabled) return;
 		stripeEnabled = h.lines ?? true;
 		versionColored = h.ver ?? 0;
 		gradientOn = h.grad ?? true;
 		showPkgSkills = h.pkg ?? false;
 		if (h.color && CMAP[h.color]) logoColorKey = h.color;
 		recomputeFrames();
-		if (!h.disabled) {
-			if (s.rsl !== false) {
-				s.quietStartup = true;
-				s.clearOnStart = true;
-				saveSettings(s);
-				process.stdout.write("\x1b[2J\x1b[3J\x1b[H");
-			} else {
-				s.quietStartup = false;
-				s.clearOnStart = false;
-				saveSettings(s);
-			}
-			setTimeout(() => apply(pi, ctx), 0);
+		if (s.rsl !== false) {
+			s.quietStartup = true;
+			s.clearOnStart = true;
+			saveSettings(s);
+			process.stdout.write("\x1b[2J\x1b[3J\x1b[H");
+		} else {
+			s.quietStartup = false;
+			s.clearOnStart = false;
+			saveSettings(s);
 		}
+		setTimeout(() => apply(pi, ctx), 0);
 	});
 
 	pi.registerCommand("htg", {
@@ -588,9 +552,6 @@ export default function (pi: ExtensionAPI) {
 				active?.dispose();
 				active = undefined;
 				ctx.ui.setHeader(undefined);
-				ctx.ui.setFooter(undefined);
-				ctx.ui.setWorkingIndicator();
-				ctx.ui.setEditorComponent(undefined);
 				ctx.ui.notify(
 					"pi-cc-header disabled, changes apply next session",
 					"info",
@@ -601,20 +562,11 @@ export default function (pi: ExtensionAPI) {
 	pi.registerCommand("hi", {
 		description: "Toggle IBM-style on/off",
 		handler: async (_args, ctx) => {
-			const s = getSettings();
-			if ((s.ccHeader || {}).disabled) {
-				ctx.ui.notify("pi-cc-header is disabled, use /htg to enable", "info");
-				return;
-			}
-			stripeEnabled = !stripeEnabled;
-			s.ccHeader = { ...s.ccHeader, lines: stripeEnabled };
-			saveSettings(s);
-			recomputeFrames();
-			// Rebuild header to pick up new frames
-			active?.dispose();
-			active = undefined;
-			apply(pi, ctx, "none");
-			ctx.ui.notify(`Lines: ${stripeEnabled ? "ON" : "OFF"}`, "info");
+			modifyConfig(ctx, (h) => {
+				stripeEnabled = !stripeEnabled;
+				h.lines = stripeEnabled;
+				return `Lines: ${stripeEnabled ? "ON" : "OFF"}`;
+			});
 		},
 	});
 
@@ -622,112 +574,70 @@ export default function (pi: ExtensionAPI) {
 		description:
 			"Set header color: c=clawd a=anthropic r=red o=orange y=yellow g=green w=white b=blue p=purple",
 		handler: async (args, ctx) => {
-			const s = getSettings();
-			if ((s.ccHeader || {}).disabled) {
-				ctx.ui.notify("pi-cc-header is disabled, use /htg to enable", "info");
-				return;
-			}
-			if (!CMAP[args ?? ""]) {
-				ctx.ui.notify(`Colors: ${Object.keys(CMAP).join(" ")}`, "error");
-				return;
-			}
-			logoColorKey = args!;
-			s.ccHeader = { ...s.ccHeader, color: args };
-			saveSettings(s);
-			recomputeFrames();
-			active?.dispose();
-			active = undefined;
-			ctx.ui.notify(`Color: ${args}`, "info");
-			apply(pi, ctx, "none");
+			modifyConfig(ctx, (h) => {
+				if (!CMAP[args ?? ""]) {
+					ctx.ui.notify(`Colors: ${Object.keys(CMAP).join(" ")}`, "error");
+					return null;
+				}
+				logoColorKey = args!;
+				h.color = args;
+				return `Color: ${args}`;
+			});
 		},
 	});
 
 	pi.registerCommand("hv", {
 		description: "Toggle version number color follow logo",
 		handler: async (_args, ctx) => {
-			const s = getSettings();
-			if ((s.ccHeader || {}).disabled) {
-				ctx.ui.notify("pi-cc-header is disabled, use /htg to enable", "info");
-				return;
-			}
-			versionColored = (versionColored + 1) % 3;
-			s.ccHeader = { ...s.ccHeader, ver: versionColored };
-			saveSettings(s);
-			const labels = ["OFF", "Pi only", "Pi+ver"];
-			active?.dispose();
-			active = undefined;
-			apply(pi, ctx, "none");
-			ctx.ui.notify(`Version color: ${labels[versionColored]}`, "info");
+			modifyConfig(ctx, (h) => {
+				versionColored = (versionColored + 1) % 3;
+				h.ver = versionColored;
+				return `Version color: ${["OFF", "Pi only", "Pi+ver"][versionColored]}`;
+			});
 		},
 	});
 
 	pi.registerCommand("hm", {
 		description: "Toggle Minecraft-style on/off",
 		handler: async (_args, ctx) => {
-			const s = getSettings();
-			if ((s.ccHeader || {}).disabled) {
-				ctx.ui.notify("pi-cc-header is disabled, use /htg to enable", "info");
-				return;
-			}
-			gradientOn = !gradientOn;
-			s.ccHeader = { ...s.ccHeader, grad: gradientOn };
-			saveSettings(s);
-			recomputeFrames();
-			active?.dispose();
-			active = undefined;
-			apply(pi, ctx, "none");
-			ctx.ui.notify(`Gradient: ${gradientOn ? "ON" : "OFF"}`, "info");
+			modifyConfig(ctx, (h) => {
+				gradientOn = !gradientOn;
+				h.grad = gradientOn;
+				return `Gradient: ${gradientOn ? "ON" : "OFF"}`;
+			});
 		},
 	});
 
 	pi.registerCommand("hdf", {
 		description: "Reset pi-cc-header to developer defaults (overwrites config)",
 		handler: async (_args, ctx) => {
-			const s = getSettings();
-			if ((s.ccHeader || {}).disabled) {
-				ctx.ui.notify("pi-cc-header is disabled, use /htg to enable", "info");
-				return;
-			}
-			stripeEnabled = true;
-			logoColorKey = "c";
-			versionColored = 2;
-			gradientOn = true;
-			showPkgSkills = false;
-			recomputeFrames();
-			s.ccHeader = {
-				lines: true,
-				color: "c",
-				ver: 2,
-				grad: true,
-				pkg: false,
-				disabled: false,
-			};
-			saveSettings(s);
-			active?.dispose();
-			active = undefined;
-			apply(pi, ctx, "none");
-			ctx.ui.notify("Reset to developer defaults", "info");
+			modifyConfig(ctx, (h) => {
+				stripeEnabled = true;
+				logoColorKey = "c";
+				versionColored = 2;
+				gradientOn = true;
+				showPkgSkills = false;
+				Object.assign(h, {
+					lines: true,
+					color: "c",
+					ver: 2,
+					grad: true,
+					pkg: false,
+					disabled: false,
+				});
+				return "Reset to developer defaults";
+			});
 		},
 	});
 
 	pi.registerCommand("hps", {
 		description: "Toggle pkg skills visibility (6 skills | 6|7 skills)",
 		handler: async (_args, ctx) => {
-			const s = getSettings();
-			if ((s.ccHeader || {}).disabled) {
-				ctx.ui.notify("pi-cc-header is disabled, use /htg to enable", "info");
-				return;
-			}
-			showPkgSkills = !showPkgSkills;
-			s.ccHeader = { ...s.ccHeader, pkg: showPkgSkills };
-			saveSettings(s);
-			active?.dispose();
-			active = undefined;
-			apply(pi, ctx, "none");
-			ctx.ui.notify(
-				`Pkg skills: ${showPkgSkills ? "VISIBLE" : "HIDDEN"}`,
-				"info",
-			);
+			modifyConfig(ctx, (h) => {
+				showPkgSkills = !showPkgSkills;
+				h.pkg = showPkgSkills;
+				return `Pkg skills: ${showPkgSkills ? "VISIBLE" : "HIDDEN"}`;
+			});
 		},
 	});
 
@@ -745,7 +655,7 @@ export default function (pi: ExtensionAPI) {
 				`Resource list: ${s.rsl !== false ? "HIDDEN" : "VISIBLE"}`,
 				"info",
 			);
-			setTimeout(() => ctx.reload(), 100);
+			setTimeout(() => (ctx as any).reload(), 100);
 		},
 	});
 }

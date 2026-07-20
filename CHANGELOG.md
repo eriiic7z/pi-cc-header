@@ -4,6 +4,12 @@
 
 All notable changes to pi-cc-header.
 
+## v0.9.4 (2026-07-20)
+
+### Changed
+
+- `image` field now points to `thumbnail.png` — cropped 16:10 preview for pi.dev search results
+
 ## v0.9.3 (2026-07-20)
 
 ### Removed
@@ -260,6 +266,12 @@ All notable changes to pi-cc-header.
 ---
 
 ## 中文
+
+## v0.9.4 (2026-07-20)
+
+### 变更
+
+- `image` 字段改为指向 `thumbnail.png` — 适配 pi.dev 搜索结果 16:10 预览比例
 
 ## v0.9.3 (2026-07-20)
 
