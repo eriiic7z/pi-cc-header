@@ -4,6 +4,12 @@
 
 All notable changes to pi-cc-header.
 
+## v0.9.3 (2026-07-20)
+
+### Removed
+
+- README: "Auto behavior" section — implementation details not relevant to users
+
 ## v0.9.2 (2026-07-20)
 
 ### Added
@@ -254,6 +260,12 @@ All notable changes to pi-cc-header.
 ---
 
 ## 中文
+
+## v0.9.3 (2026-07-20)
+
+### 移除
+
+- README：删除"自动行为"章节 — 实现细节对用户无意义
 
 ## v0.9.2 (2026-07-20)
 
