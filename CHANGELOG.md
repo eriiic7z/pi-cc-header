@@ -4,6 +4,12 @@
 
 All notable changes to pi-cc-header.
 
+## v0.9.2 (2026-07-20)
+
+### Added
+
+- `image` field in `package.json` `pi` block for pi.dev gallery preview
+
 ## v0.9.1 (2026-07-20)
 
 ### Changed
@@ -248,6 +254,12 @@ All notable changes to pi-cc-header.
 ---
 
 ## 中文
+
+## v0.9.2 (2026-07-20)
+
+### 新增
+
+- `package.json` 的 `pi` 块新增 `image` 字段，用于 pi.dev 预览图展示
 
 ## v0.9.1 (2026-07-20)
 
