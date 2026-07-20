@@ -17,6 +17,7 @@ let stripeEnabled = true;
 let versionColored = 0; // 0=none 1=Pi only 2=Pi+version
 let gradientOn = true;
 let logoColorKey = "a"; // default anthropic brand orange
+let showPkgSkills = false;
 const CMAP: Record<string, string> = {
 	a: "38;2;217;119;87",
 	r: "31",
@@ -255,16 +256,129 @@ function padRight(text: string, width: number): string {
 	return clipped + " ".repeat(Math.max(0, width - visibleWidth(clipped)));
 }
 
-/* ── 统计 ── */
-function countExtensions(home: string): number {
+/* ── 统一扫描 node_modules 下所有 pi package ── */
+interface PiPackage {
+	pkgDir: string; // absolute dir of the package
+	meta: Record<string, any>; // parsed package.json
+}
+
+function listPiPackages(home: string): PiPackage[] {
+	const result: PiPackage[] = [];
+	const root = join(home, ".pi", "agent", "npm", "node_modules");
+	if (!existsSync(root)) return result;
+
+	for (const name of readdirSync(root)) {
+		if (name.startsWith(".")) continue;
+		const full = join(root, name);
+		if (name.startsWith("@")) {
+			// scoped package – walk one level deeper
+			let subs: string[];
+			try {
+				subs = readdirSync(full);
+			} catch {
+				continue;
+			}
+			for (const sub of subs) {
+				const spj = join(full, sub, "package.json");
+				if (!existsSync(spj)) continue;
+				try {
+					const sm = JSON.parse(readFileSync(spj, "utf-8"));
+					if (sm.pi) result.push({ pkgDir: join(full, sub), meta: sm });
+				} catch {}
+			}
+			continue;
+		}
+		const pj = join(full, "package.json");
+		if (!existsSync(pj)) continue;
+		try {
+			const m = JSON.parse(readFileSync(pj, "utf-8"));
+			if (m.pi) result.push({ pkgDir: full, meta: m });
+		} catch {}
+	}
+	return result;
+}
+
+function resolvePiPath(pkgDir: string, entry: string): string {
+	let dir = join(pkgDir, entry);
+	// Normalise broken relative paths like "../../skills" back into the pkg.
+	if (!existsSync(dir)) {
+		const basename = entry.replace(/^(\.\.?\/)+/, "");
+		dir = join(pkgDir, basename);
+	}
+	return existsSync(dir) ? dir : "";
+}
+
+/* ── 各项统计 ── */
+function countExtensions(home: string): { installed: number; residue: number } {
+	// installed = packages in settings.json
+	let installed = 0;
 	try {
 		const s = JSON.parse(
 			readFileSync(join(home, ".pi", "agent", "settings.json"), "utf-8"),
 		);
-		return Array.isArray(s.packages) ? s.packages.length : 0;
-	} catch {
-		return 0;
+		if (Array.isArray(s.packages)) installed = s.packages.length;
+	} catch {}
+	// residue = pi packages in node_modules NOT in settings.json
+	const pkgNames = new Set<string>();
+	for (const p of listPiPackages(home)) {
+		const parts = p.pkgDir.split("/");
+		// "@scope/pkg"  or  "pkg"
+		const name = parts[parts.length - 2]?.startsWith("@")
+			? parts.slice(-2).join("/")
+			: parts[parts.length - 1];
+		pkgNames.add(name);
 	}
+	// Convert settings.json "npm:name" → "name"
+	const settingsNames = new Set<string>();
+	try {
+		const s = JSON.parse(
+			readFileSync(join(home, ".pi", "agent", "settings.json"), "utf-8"),
+		);
+		if (Array.isArray(s.packages)) {
+			for (const entry of s.packages) {
+				const name = String(entry).replace(/^npm:/, "");
+				settingsNames.add(name);
+			}
+		}
+	} catch {}
+	let residue = 0;
+	for (const n of pkgNames) {
+		if (!settingsNames.has(n)) residue++;
+	}
+	return { installed, residue };
+}
+
+function countPrompts(home: string): number {
+	const seen = new Set<string>();
+	for (const p of listPiPackages(home)) {
+		const entries = p.meta.pi?.prompts;
+		if (!Array.isArray(entries)) continue;
+		for (const entry of entries) {
+			const dir = resolvePiPath(p.pkgDir, entry);
+			if (!dir) continue;
+			for (const e of readdirSync(dir)) {
+				if (e.endsWith(".md")) seen.add(e.slice(0, -3));
+			}
+		}
+	}
+	return seen.size;
+}
+
+function countPkgSkills(home: string): number {
+	const seen = new Set<string>();
+	for (const p of listPiPackages(home)) {
+		const entries = p.meta.pi?.skills;
+		if (!Array.isArray(entries)) continue;
+		for (const entry of entries) {
+			const dir = resolvePiPath(p.pkgDir, entry);
+			if (!dir) continue;
+			for (const e of readdirSync(dir, { withFileTypes: true })) {
+				if (e.isDirectory()) seen.add(join(dir, e.name));
+				else if (e.name.endsWith(".md")) seen.add(join(dir, e.name));
+			}
+		}
+	}
+	return seen.size;
 }
 
 function countSkills(home: string, cwd: string): number {
@@ -285,11 +399,25 @@ function countSkills(home: string, cwd: string): number {
 	return dirs.size;
 }
 
+function detectAgents(home: string, cwd: string): string {
+	const global = existsSync(join(home, ".pi", "agent", "AGENTS.md"));
+	const project =
+		existsSync(join(cwd, "AGENTS.md")) ||
+		existsSync(join(cwd, ".pi", "AGENTS.md"));
+	if (global && project) return "Aa";
+	if (global) return "A";
+	if (project) return "a";
+	return "";
+}
+
 function computeStats(ctx: ExtensionContext) {
 	const home = process.env.HOME ?? "";
 	return {
 		extensions: countExtensions(home),
 		skills: countSkills(home, ctx.cwd),
+		pkgSkills: countPkgSkills(home),
+		prompts: countPrompts(home),
+		agents: detectAgents(home, ctx.cwd),
 	};
 }
 
@@ -297,7 +425,13 @@ function computeStats(ctx: ExtensionContext) {
 class PiHeader implements Component {
 	private frame = 0;
 	private readonly timer: NodeJS.Timeout;
-	private readonly stats: { extensions: number; skills: number };
+	private readonly stats: {
+		extensions: { installed: number; residue: number };
+		skills: number;
+		pkgSkills: number;
+		prompts: number;
+		agents: string;
+	};
 
 	constructor(
 		private readonly pi: ExtensionAPI,
@@ -330,7 +464,14 @@ class PiHeader implements Component {
 		const model = this.ctx.model?.id ?? "Default";
 		const effort = this.pi.getThinkingLevel();
 		const cwd = formatCwd(this.ctx.cwd);
-		const statsLine = `${this.stats.extensions} extensions · ${this.stats.skills} skills`;
+		const skillText = showPkgSkills
+			? `${this.stats.skills}|${this.stats.pkgSkills} skills`
+			: `${this.stats.skills} skills`;
+		const extText =
+			this.stats.extensions.residue > 0
+				? `${this.stats.extensions.installed}(+${this.stats.extensions.residue}) extensions`
+				: `${this.stats.extensions.installed} extensions`;
+		const statsLine = `${skillText} · ${this.stats.prompts} prompts · ${extText}`;
 
 		const piText =
 			versionColored >= 2
@@ -342,7 +483,7 @@ class PiHeader implements Component {
 			2: piText,
 			3: muted(`${model} · ${effort}`),
 			4: muted(statsLine),
-			5: muted(cwd),
+			5: muted(this.stats.agents ? `${this.stats.agents} · ${cwd}` : cwd),
 		};
 
 		const lines: string[] = [];
@@ -404,6 +545,7 @@ export default function (pi: ExtensionAPI) {
 		stripeEnabled = h.lines ?? true;
 		versionColored = h.ver ?? 0;
 		gradientOn = h.grad ?? true;
+		showPkgSkills = h.pkg ?? false;
 		if (h.color && CMAP[h.color]) logoColorKey = h.color;
 		recomputeFrames();
 		if (!h.disabled) {
@@ -550,12 +692,14 @@ export default function (pi: ExtensionAPI) {
 			logoColorKey = "c";
 			versionColored = 2;
 			gradientOn = true;
+			showPkgSkills = false;
 			recomputeFrames();
 			s.ccHeader = {
 				lines: true,
 				color: "c",
 				ver: 2,
 				grad: true,
+				pkg: false,
 				disabled: false,
 			};
 			saveSettings(s);
@@ -563,6 +707,27 @@ export default function (pi: ExtensionAPI) {
 			active = undefined;
 			apply(pi, ctx, "none");
 			ctx.ui.notify("Reset to developer defaults", "info");
+		},
+	});
+
+	pi.registerCommand("hps", {
+		description: "Toggle pkg skills visibility (6 skills | 6|7 skills)",
+		handler: async (_args, ctx) => {
+			const s = getSettings();
+			if ((s.ccHeader || {}).disabled) {
+				ctx.ui.notify("pi-cc-header is disabled, use /htg to enable", "info");
+				return;
+			}
+			showPkgSkills = !showPkgSkills;
+			s.ccHeader = { ...s.ccHeader, pkg: showPkgSkills };
+			saveSettings(s);
+			active?.dispose();
+			active = undefined;
+			apply(pi, ctx, "none");
+			ctx.ui.notify(
+				`Pkg skills: ${showPkgSkills ? "VISIBLE" : "HIDDEN"}`,
+				"info",
+			);
 		},
 	});
 
