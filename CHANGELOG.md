@@ -4,6 +4,27 @@
 
 All notable changes to pi-cc-header.
 
+## v0.9.5 (2026-07-25)
+
+### Changed
+
+- Refactored `computeStats`: merged 6 independent scanning functions into single pass
+- Extracted `modifyConfig` helper: eliminated 6× duplicate command handler boilerplate
+- Merged 8 gradient color cases in `colorCell` via unified fallthrough + `cg()` helper
+- Added `console.warn` to 4 empty `catch` blocks in `computeStats`
+
+### Fixed
+
+- `htg` disable: no longer clears other extensions' footer/editor/working indicator (#2)
+- `session_start`: early return when disabled, skip config loading and frame recompute (#5)
+
+### Infrastructure
+
+- Added `tsconfig.json`, local type declarations for `@earendil-works/pi-*` peer deps
+- Added `@types/node` devDependency — silences 33 LSP type errors
+- Added `node_modules/` and `*.tgz` to `.gitignore` (#7.6)
+- Updated SEO keywords: 6→14 covering pi, TUI, startup, color, theme, open-source
+
 ## v0.9.4 (2026-07-20)
 
 ### Changed
@@ -266,6 +287,27 @@ All notable changes to pi-cc-header.
 ---
 
 ## 中文
+
+## v0.9.5 (2026-07-25)
+
+### 变更
+
+- 重构 `computeStats`：6 个独立扫描函数合并为单次遍历
+- 提取 `modifyConfig` 辅助函数：消除 6 个命令处理器的重复样板代码
+- 合并 `colorCell` 中 8 个渐变颜色 case，统一为 `cg()` 辅助 + fallthrough
+- 为 `computeStats` 中 4 个空 `catch` 块添加 `console.warn`
+
+### 修复
+
+- `htg` 禁用：不再清除其他扩展注册的 footer/editor/working indicator (#2)
+- `session_start`：禁用时提前返回，跳过配置加载与帧重算 (#5)
+
+### 基础设施
+
+- 新增 `tsconfig.json`、本地类型声明文件，消除 33 个 LSP 类型报错
+- 新增 `@types/node` devDependency
+- `.gitignore` 增加 `node_modules/` 和 `*.tgz` (#7.6)
+- SEO 关键词由 6 个扩展至 14 个
 
 ## v0.9.4 (2026-07-20)
 
