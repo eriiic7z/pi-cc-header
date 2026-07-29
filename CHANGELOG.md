@@ -4,6 +4,36 @@
 
 All notable changes to pi-cc-header.
 
+## v0.10.0 (2026-07-30)
+
+### Added
+
+- `/hs` slogan: `/hs <text>` set, `/hs` toggle, `/hs -c` toggle color, `/hs -d` delete. Slogan replaces model row when active; classic 4-row layout restored when off. Max 85 chars, truncated with "..." on narrow terminals.
+- `/hsp` animation speed: 25/50/75/100 ms, persisted. `/hsp <n>` sets, `/hsp` shows current speed.
+
+### Changed
+
+- Notification system rebuilt: 7-class framework (A–G) with unified formulas. All 32+ notifications audited and aligned.
+- Disabled-state and no-slogan guards upgraded to G class: `"Command unavailable: pi-cc-header disabled. Use /htg to enable."`; `"Command unavailable: no slogan set. Use /hs <text> to set one."`.
+- Toggle and error notifications rebuilt: B class unified with colon (`"pi-cc-header: ENABLED/DISABLED"`, `"IBM-style: ON/OFF"`); invalid-input upgraded to E class (`"Invalid <object>: \"<input>\". <constraint>"`).
+- F class command descriptions rewritten to new formula (`<object>：<usage1>；<usage2>`).
+- Skills counting uses `Set<string>` — same-named skill across multiple directories counted once.
+- Classic 4-row layout: agents tag removed from model row (only appears in path row now).
+- `/hdf` reset: rewritten as standalone handler, no longer blocked by `modifyConfig` disabled guard.
+- `/hdf` and `/htg` enable double clear-screen eliminated: `apply(…,"viewport")` → `"none"`.
+
+### Fixed
+
+- All remaining bare `catch` blocks in `computeStats` now emit `console.warn` (prompts dir, pkg skills dir, scoped packages, skills dirs).
+- `/hrl` bug: `(ctx as any).reload()` → `ctx.ui.reload()`.
+- `/hsp` corruption guard: `indexOf` fallback on non-standard stored speed value.
+
+### Refactored
+
+- `configStartupEnabled` helper: deduplicated clear-screen+settings-write logic used in `session_start`, `/htg enable`, and `/hdf`.
+- `cachedStats` + `invalidateStats`: `computeStats` runs once per session, not on every header toggle.
+- Dead code removed (`brand`, `logoBrand`, `bc` parameter, `"brand"`/`"stripe"` LogoColor, `% LOGO_FRAMES.length`); logo version line unbolded, slogan row uses muted bold.
+
 ## v0.9.5 (2026-07-25)
 
 ### Changed
@@ -287,6 +317,36 @@ All notable changes to pi-cc-header.
 ---
 
 ## 中文
+
+## v0.10.0 (2026-07-30)
+
+### 新增
+
+- `/hs` 标语：`/hs <文字>` 设置、`/hs` 切换开关、`/hs -c` 切换颜色、`/hs -d` 删除。标语开启后替换模型行，关闭后恢复经典 4 行布局。最长 85 字符，窄终端自动截断并显示 "..."。
+- `/hsp` 动画速度：支持 25/50/75/100 ms 四档，`/hsp <数字>` 直接设定，`/hsp` 查看当前速度。配置持久化。
+
+### 变更
+
+- 命令提示语体系重建：7 类框架（A–G）统一公式，32+ 条通知逐条审计对齐。
+- 禁用状态和无 slogan 守卫升级为 G 类：`"Command unavailable: pi-cc-header disabled. Use /htg to enable."`；`"Command unavailable: no slogan set. Use /hs <text> to set one."`。
+- 开关和错误通知重建：B 类统一加冒号（`"pi-cc-header: ENABLED/DISABLED"`、`"IBM-style: ON/OFF"`）；取值不合法升级为 E 类（`"Invalid <对象>: \"<输入>\". <约束>"`）。
+- F 类命令描述改写为新公式（`<操作对象>：<用法1>；<用法2>`）。
+- Skills 统计改用 `Set<string>` 去重——同一 skill 出现在多个目录只计一次。
+- 经典 4 行布局：模型行去掉 agents 标记（仅路径行保留）。
+- `/hdf` 重置：重写为独立 handler，不再被 `modifyConfig` 的 disabled 守卫拦截。
+- `/hdf` 和 `/htg` 启用时消除双次清屏：`apply(…,"viewport")` → `"none"`。
+
+### 修复
+
+- `computeStats` 中所有剩余的裸 `catch` 块均加入 `console.warn`（prompts 目录、pkg skills 目录、scoped 包、skills 目录）。
+- `/hrl` bug：`(ctx as any).reload()` → `ctx.ui.reload()`。
+- `/hsp` 容错：存储值异常时 `indexOf` 回退处理。
+
+### 重构
+
+- 提取 `configStartupEnabled` helper：消除 `session_start`、`/htg enable`、`/hdf` 三处清屏+写配置的重复代码。
+- `cachedStats` + `invalidateStats`：`computeStats` 每会话只计算一次，不再每次 toggle 重复执行。
+- 删除死代码（`brand`、`logoBrand`、`bc` 参数、`"brand"`/`"stripe"` LogoColor 成员、`% LOGO_FRAMES.length`）；版本行取消粗体，标语行使用 muted 粗体。
 
 ## v0.9.5 (2026-07-25)
 

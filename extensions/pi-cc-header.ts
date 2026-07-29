@@ -8,16 +8,40 @@ import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import { readFileSync, writeFileSync, readdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 
-/* ── 样式工具 ── */
-const brand = (s: string) => `\x1b[1m${s}\x1b[22m`;
-
 /* ── 品牌色 ── */
-const LOGO_INTERVAL = 75;
+const SPEEDS = [25, 50, 75, 100] as const;
+let logoInterval: (typeof SPEEDS)[number] = SPEEDS[0];
+let slogan = "Code something that makes you proud";
+let /* biome-ignore format: mutable */ sloganOn = true;
+let /* biome-ignore format: mutable */ sloganColor = true;
 let stripeEnabled = true;
-let versionColored = 0; // 0=none 1=Pi only 2=Pi+version
+let versionColored = 1;
 let gradientOn = true;
-let logoColorKey = "a"; // default anthropic brand orange
+let logoColorKey = "c";
 let showPkgSkills = false;
+const COLOR_NAMES: Record<string, string> = {
+	a: "anthropic",
+	c: "clawd",
+	r: "red",
+	o: "orange",
+	y: "yellow",
+	g: "green",
+	w: "white",
+	b: "blue",
+	p: "purple",
+};
+const DEFAULT_CC_HEADER = {
+	lines: true,
+	color: "c",
+	ver: 1,
+	grad: true,
+	pkg: false,
+	disabled: false,
+	speed: SPEEDS[0],
+	sloganColor: true,
+	slogan: "Code something that makes you proud",
+	sloganOn: true,
+};
 const CMAP: Record<string, string> = {
 	a: "38;2;217;119;87",
 	r: "31",
@@ -76,10 +100,8 @@ type LogoColor =
 	| "orange"
 	| "white"
 	| "flash"
-	| "stripe"
 	| "logo"
 	| "logoStripe"
-	| "brand"
 	| "l1"
 	| "l2"
 	| "l3"
@@ -135,7 +157,7 @@ const LOGO_FRAMES: LogoFrame[] = [
 	{ phase: 6, active: "none", ax: 0, ay: 0, flash: false, white: false },
 ];
 
-const colorCell = (color: LogoColor, bc: (s: string) => string): string => {
+const colorCell = (color: LogoColor): string => {
 	const cg = (n: number) => GMAP[logoColorKey]?.[n] ?? "34";
 	switch (color) {
 		case "cyan":
@@ -163,8 +185,6 @@ const colorCell = (color: LogoColor, bc: (s: string) => string): string => {
 		case "s3":
 		case "s4":
 			return `\x1b[${cg(+color[1] - 1)}m──\x1b[39m`;
-		case "brand":
-			return bc("██");
 		default:
 			return "  ";
 	}
@@ -218,26 +238,23 @@ function logoCellColor(frame: LogoFrame, y: number, x: number): LogoColor {
 	return "panel";
 }
 
-function piLogoFrame(frameIndex: number, bc: (s: string) => string): string[] {
-	const frame = LOGO_FRAMES[frameIndex % LOGO_FRAMES.length];
+function piLogoFrame(frameIndex: number): string[] {
+	const frame = LOGO_FRAMES[frameIndex];
 	const lines: string[] = [];
 	for (let y = 1; y <= 7; y++) {
 		let line = "";
-		for (let x = 1; x <= 8; x++)
-			line += colorCell(logoCellColor(frame, y, x), bc);
+		for (let x = 1; x <= 8; x++) line += colorCell(logoCellColor(frame, y, x));
 		lines.push(line);
 	}
 	return lines;
 }
 
 let PRECOMPUTED_LOGO_FRAMES: string[][] = LOGO_FRAMES.map((_, i) =>
-	piLogoFrame(i, (s: string) => brand(s)),
+	piLogoFrame(i),
 );
 
 function recomputeFrames(): void {
-	PRECOMPUTED_LOGO_FRAMES = LOGO_FRAMES.map((_, i) =>
-		piLogoFrame(i, (s: string) => brand(s)),
-	);
+	PRECOMPUTED_LOGO_FRAMES = LOGO_FRAMES.map((_, i) => piLogoFrame(i));
 }
 
 /* ── 工具函数 ── */
@@ -279,20 +296,30 @@ function computeStats(ctx: ExtensionContext) {
 			for (const e of m.pi.prompts) {
 				let d = join(pkgDir, e);
 				if (!existsSync(d)) d = join(pkgDir, e.replace(/^(\.\.?\/)+/, ""));
-				if (existsSync(d))
-					prompts += readdirSync(d).filter((f: string) =>
-						f.endsWith(".md"),
-					).length;
+				if (existsSync(d)) {
+					try {
+						prompts += readdirSync(d).filter((f: string) =>
+							f.endsWith(".md"),
+						).length;
+					} catch {
+						console.warn("pi-cc-header: failed to read prompts dir", d);
+					}
+				}
 			}
 		}
 		if (Array.isArray(m.pi.skills)) {
 			for (const e of m.pi.skills) {
 				let d = join(pkgDir, e);
 				if (!existsSync(d)) d = join(pkgDir, e.replace(/^(\.\.?\/)+/, ""));
-				if (existsSync(d))
-					pkgSkills += readdirSync(d, { withFileTypes: true }).filter(
-						(f) => f.isDirectory() || f.name.endsWith(".md"),
-					).length;
+				if (existsSync(d)) {
+					try {
+						pkgSkills += readdirSync(d, { withFileTypes: true }).filter(
+							(f) => f.isDirectory() || f.name.endsWith(".md"),
+						).length;
+					} catch {
+						console.warn("pi-cc-header: failed to read pkg skills dir", d);
+					}
+				}
 			}
 		}
 	}
@@ -305,6 +332,10 @@ function computeStats(ctx: ExtensionContext) {
 				try {
 					subs = readdirSync(join(root, name));
 				} catch {
+					console.warn(
+						"pi-cc-header: failed to list scoped packages under",
+						name,
+					);
 					continue;
 				}
 				for (const sub of subs) {
@@ -330,7 +361,7 @@ function computeStats(ctx: ExtensionContext) {
 		}
 	}
 
-	let skills = 0;
+	const skillNames = new Set<string>();
 	for (const d of [
 		join(home, ".agents", "skills"),
 		join(ctx.cwd, ".agents", "skills"),
@@ -338,8 +369,12 @@ function computeStats(ctx: ExtensionContext) {
 		join(ctx.cwd, ".pi", "skills"),
 	]) {
 		if (!existsSync(d)) continue;
-		for (const e of readdirSync(d, { withFileTypes: true })) {
-			if (e.isDirectory() || e.name.endsWith(".md")) skills++;
+		try {
+			for (const e of readdirSync(d, { withFileTypes: true })) {
+				if (e.isDirectory() || e.name.endsWith(".md")) skillNames.add(e.name);
+			}
+		} catch {
+			console.warn("pi-cc-header: failed to list skills dir", d);
 		}
 	}
 
@@ -350,7 +385,7 @@ function computeStats(ctx: ExtensionContext) {
 
 	return {
 		extensions: { installed, residue },
-		skills,
+		skills: skillNames.size,
 		pkgSkills,
 		prompts,
 		agents:
@@ -362,6 +397,12 @@ function computeStats(ctx: ExtensionContext) {
 						? "a"
 						: "",
 	};
+}
+
+/* ── computeStats 缓存 ── */
+let cachedStats: ReturnType<typeof computeStats> | null = null;
+function invalidateStats(): void {
+	cachedStats = null;
 }
 
 /* ── 组件：启动头部 ── */
@@ -381,7 +422,8 @@ class PiHeader implements Component {
 		private readonly ctx: ExtensionContext,
 		private readonly tui: TUI,
 	) {
-		this.stats = computeStats(ctx);
+		cachedStats ??= computeStats(ctx);
+		this.stats = cachedStats!;
 		this.timer = setInterval(() => {
 			if (this.frame < LOGO_FRAMES.length - 1) {
 				this.frame++;
@@ -390,15 +432,13 @@ class PiHeader implements Component {
 				clearInterval(this.timer);
 				this.tui.requestRender();
 			}
-		}, LOGO_INTERVAL);
+		}, logoInterval);
 		this.timer.unref?.();
 	}
 
 	render(width: number): string[] {
 		const theme = this.ctx.ui.theme;
 		const muted = (s: string) => theme.fg("muted", s);
-		const logoBrand = (s: string) =>
-			`\x1b[1m\x1b[${CMAP[logoColorKey]}m${s}\x1b[39m\x1b[22m`;
 
 		const logoLines = PRECOMPUTED_LOGO_FRAMES[this.frame];
 		const logoWidth = 14;
@@ -418,16 +458,28 @@ class PiHeader implements Component {
 
 		const piText =
 			versionColored >= 2
-				? logoBrand(`Pi v${VERSION}`)
+				? `\x1b[${CMAP[logoColorKey]}mPi v${VERSION}\x1b[39m`
 				: versionColored >= 1
-					? `${logoBrand("Pi")} v${VERSION}`
-					: `Pi v${VERSION}`;
-		const info: Record<number, string> = {
-			2: piText,
-			3: muted(`${model} · ${effort}`),
-			4: muted(statsLine),
-			5: muted(this.stats.agents ? `${this.stats.agents} · ${cwd}` : cwd),
-		};
+					? `\x1b[${CMAP[logoColorKey]}mPi\x1b[39m ${muted(`v${VERSION}`)}`
+					: muted(`Pi v${VERSION}`);
+		const modelLine = `${model} · ${effort}${this.stats.agents ? `  |  ${this.stats.agents}` : ""}`;
+		const info: Record<number, string> = sloganOn
+			? {
+					2: piText,
+					3: sloganColor
+						? `\x1b[1m\x1b[${CMAP[logoColorKey]}m${visibleWidth(slogan) > infoMaxWidth ? truncateToWidth(slogan, infoMaxWidth - 3, "") + "..." : slogan}\x1b[39m\x1b[22m`
+						: muted(
+								`\x1b[1m${visibleWidth(slogan) > infoMaxWidth ? truncateToWidth(slogan, infoMaxWidth - 3, "") + "..." : slogan}\x1b[22m`,
+							),
+					4: muted(modelLine),
+					5: muted(statsLine),
+				}
+			: {
+					2: piText,
+					3: muted(`${model} · ${effort}`),
+					4: muted(statsLine),
+					5: muted(this.stats.agents ? `${this.stats.agents} · ${cwd}` : cwd),
+				};
 
 		const lines: string[] = [];
 		for (let i = 1; i < logoLines.length; i++) {
@@ -482,7 +534,28 @@ export default function (pi: ExtensionAPI) {
 	const saveSettings = (s: Record<string, any>) =>
 		writeFileSync(settingsPath, JSON.stringify(s, null, 2) + "\n", "utf-8");
 
-	// Shared handler helper for toggle commands
+	const configStartupEnabled = (s: Record<string, any>) => {
+		s.quietStartup = true;
+		s.clearOnStart = true;
+		saveSettings(s);
+		process.stdout.write("\x1b[2J\x1b[3J\x1b[H");
+	};
+
+	const directApply = (
+		ctx: ExtensionContext,
+		update: (h: Record<string, any>) => void,
+	): void => {
+		const s = getSettings();
+		const h = s.ccHeader || {};
+		update(h);
+		s.ccHeader = h;
+		saveSettings(s);
+		recomputeFrames();
+		active?.dispose();
+		active = undefined;
+		apply(pi, ctx, "none");
+	};
+
 	const modifyConfig = (
 		ctx: ExtensionContext,
 		update: (h: Record<string, any>, s: Record<string, any>) => string | null,
@@ -490,7 +563,10 @@ export default function (pi: ExtensionAPI) {
 		const s = getSettings();
 		const h = s.ccHeader || {};
 		if (h.disabled) {
-			ctx.ui.notify("pi-cc-header is disabled, use /htg to enable", "info");
+			ctx.ui.notify(
+				"Command unavailable: pi-cc-header disabled. Use /htg to enable.",
+				"info",
+			);
 			return;
 		}
 		const msg = update(h, s);
@@ -508,17 +584,20 @@ export default function (pi: ExtensionAPI) {
 		const s = getSettings();
 		const h = s.ccHeader || {};
 		if (h.disabled) return;
+		invalidateStats();
 		stripeEnabled = h.lines ?? true;
 		versionColored = h.ver ?? 0;
 		gradientOn = h.grad ?? true;
 		showPkgSkills = h.pkg ?? false;
+		if (typeof h.slogan === "string") slogan = h.slogan;
+		if (typeof h.sloganOn === "boolean") sloganOn = h.sloganOn;
+		if (typeof h.sloganColor === "boolean") sloganColor = h.sloganColor;
+		if (typeof h.speed === "number" && h.speed > 0) logoInterval = h.speed;
 		if (h.color && CMAP[h.color]) logoColorKey = h.color;
 		recomputeFrames();
+		// persist settings to disk
 		if (s.rsl !== false) {
-			s.quietStartup = true;
-			s.clearOnStart = true;
-			saveSettings(s);
-			process.stdout.write("\x1b[2J\x1b[3J\x1b[H");
+			configStartupEnabled(s);
 		} else {
 			s.quietStartup = false;
 			s.clearOnStart = false;
@@ -528,22 +607,17 @@ export default function (pi: ExtensionAPI) {
 	});
 
 	pi.registerCommand("htg", {
-		description: "Toggle pi-cc-header enabled/disabled (config preserved)",
+		description: "Toggle pi-cc-header ENABLED/DISABLED",
 		handler: async (_args, ctx) => {
 			const s = getSettings();
 			const h = s.ccHeader || {};
 			if (h.disabled) {
-				// Re-enable
 				s.ccHeader = h;
 				h.disabled = false;
-				s.quietStartup = true;
-				s.clearOnStart = true;
-				saveSettings(s);
-				process.stdout.write("\x1b[2J\x1b[3J\x1b[H");
-				apply(pi, ctx, "viewport");
-				ctx.ui.notify("pi-cc-header enabled", "info");
+				configStartupEnabled(s);
+				apply(pi, ctx, "none");
+				ctx.ui.notify("pi-cc-header: ENABLED", "info");
 			} else {
-				// Disable
 				s.ccHeader = h;
 				h.disabled = true;
 				s.quietStartup = false;
@@ -553,33 +627,43 @@ export default function (pi: ExtensionAPI) {
 				active = undefined;
 				ctx.ui.setHeader(undefined);
 				ctx.ui.notify(
-					"pi-cc-header disabled, changes apply next session",
+					"pi-cc-header: DISABLED. Config saved, /htg to re-enable.",
 					"info",
 				);
 			}
 		},
 	});
 	pi.registerCommand("hi", {
-		description: "Toggle IBM-style on/off",
+		description: "Toggle IBM-style ON/OFF",
 		handler: async (_args, ctx) => {
 			modifyConfig(ctx, (h) => {
 				stripeEnabled = !stripeEnabled;
 				h.lines = stripeEnabled;
-				return `Lines: ${stripeEnabled ? "ON" : "OFF"}`;
+				return `IBM-style: ${stripeEnabled ? "ON" : "OFF"}`;
 			});
 		},
 	});
 
 	pi.registerCommand("hc", {
 		description:
-			"Set header color: c=clawd a=anthropic r=red o=orange y=yellow g=green w=white b=blue p=purple",
+			"Header color: <code> = set (c a r o y g w b p); no args = show",
 		handler: async (args, ctx) => {
+			if (!args) {
+				ctx.ui.notify(
+					`Header color: ${logoColorKey} (${COLOR_NAMES[logoColorKey]}). Available: ${Object.keys(CMAP).join(" ")}`,
+					"info",
+				);
+				return;
+			}
 			modifyConfig(ctx, (h) => {
-				if (!CMAP[args ?? ""]) {
-					ctx.ui.notify(`Colors: ${Object.keys(CMAP).join(" ")}`, "error");
+				if (!CMAP[args]) {
+					ctx.ui.notify(
+						`Invalid color: "${args}". Available: ${Object.keys(CMAP).join(" ")}`,
+						"error",
+					);
 					return null;
 				}
-				logoColorKey = args!;
+				logoColorKey = args;
 				h.color = args;
 				return `Color: ${args}`;
 			});
@@ -587,8 +671,24 @@ export default function (pi: ExtensionAPI) {
 	});
 
 	pi.registerCommand("hv", {
-		description: "Toggle version number color follow logo",
-		handler: async (_args, ctx) => {
+		description: "Version label color: no args = cycle; <all|pi|off> = set",
+		handler: async (args, ctx) => {
+			if (args) {
+				const v = args.trim();
+				if (!["all", "pi", "off"].includes(v)) {
+					ctx.ui.notify(
+						`Invalid value: "${v}". Available: all, pi, off.`,
+						"error",
+					);
+					return;
+				}
+				versionColored = v === "all" ? 2 : v === "pi" ? 1 : 0;
+				directApply(ctx, (h) => {
+					h.ver = versionColored;
+				});
+				ctx.ui.notify(`Version label color: ${v}`, "info");
+				return;
+			}
 			modifyConfig(ctx, (h) => {
 				versionColored = (versionColored + 1) % 3;
 				h.ver = versionColored;
@@ -598,12 +698,12 @@ export default function (pi: ExtensionAPI) {
 	});
 
 	pi.registerCommand("hm", {
-		description: "Toggle Minecraft-style on/off",
+		description: "Toggle Minecraft-style ON/OFF",
 		handler: async (_args, ctx) => {
 			modifyConfig(ctx, (h) => {
 				gradientOn = !gradientOn;
 				h.grad = gradientOn;
-				return `Gradient: ${gradientOn ? "ON" : "OFF"}`;
+				return `Minecraft-style: ${gradientOn ? "ON" : "OFF"}`;
 			});
 		},
 	});
@@ -611,27 +711,110 @@ export default function (pi: ExtensionAPI) {
 	pi.registerCommand("hdf", {
 		description: "Reset pi-cc-header to developer defaults (overwrites config)",
 		handler: async (_args, ctx) => {
+			const s = getSettings();
+			const h: Record<string, any> = {};
+			stripeEnabled = true;
+			logoColorKey = "c";
+			versionColored = 1;
+			gradientOn = true;
+			showPkgSkills = false;
+			sloganColor = true;
+			slogan = "Code something that makes you proud";
+			sloganOn = true;
+			logoInterval = SPEEDS[0];
+			Object.assign(h, DEFAULT_CC_HEADER);
+			s.ccHeader = h;
+			configStartupEnabled(s);
+			recomputeFrames();
+			active?.dispose();
+			active = undefined;
+			apply(pi, ctx, "none");
+			ctx.ui.notify("Reset to developer defaults", "info");
+		},
+	});
+
+	pi.registerCommand("hsp", {
+		description:
+			"Animation speed: no args = show; <number> = set (25 50 75 100)",
+		handler: async (args, ctx) => {
+			if (!args) {
+				ctx.ui.notify(
+					`Animation speed: ${logoInterval}ms. Available: ${SPEEDS.join(" ")}`,
+					"info",
+				);
+				return;
+			}
+			const n = Number(args);
+			if (!(SPEEDS as readonly number[]).includes(n)) {
+				ctx.ui.notify(
+					`Invalid speed: "${n}". Available: ${SPEEDS.join(" ")}`,
+					"error",
+				);
+				return;
+			}
+			logoInterval = n as (typeof SPEEDS)[number];
+			directApply(ctx, (h) => {
+				h.speed = logoInterval;
+			});
+			ctx.ui.notify(`Animation speed: ${logoInterval}ms`, "info");
+		},
+	});
+
+	pi.registerCommand("hs", {
+		description:
+			"Slogan: no args = on/off; <text> = set; -c = toggle color; -d = delete",
+		handler: async (args, ctx) => {
 			modifyConfig(ctx, (h) => {
-				stripeEnabled = true;
-				logoColorKey = "c";
-				versionColored = 2;
-				gradientOn = true;
-				showPkgSkills = false;
-				Object.assign(h, {
-					lines: true,
-					color: "c",
-					ver: 2,
-					grad: true,
-					pkg: false,
-					disabled: false,
-				});
-				return "Reset to developer defaults";
+				if (!args) {
+					if (!slogan) {
+						ctx.ui.notify(
+							"Command unavailable: no slogan set. Use /hs <text> to set one.",
+							"error",
+						);
+						return null;
+					}
+					sloganOn = !sloganOn;
+					h.sloganOn = sloganOn;
+					return sloganOn ? "Slogan: ON" : "Slogan: OFF";
+				}
+				if (args === "-c") {
+					sloganColor = !sloganColor;
+					h.sloganColor = sloganColor;
+					return `Slogan color: ${sloganColor ? "ON" : "OFF"}`;
+				}
+				if (args === "-d") {
+					slogan = "";
+					sloganOn = false;
+					h.slogan = "";
+					h.sloganOn = false;
+					return "Slogan: deleted";
+				}
+				const text = args.trim();
+				if (!text) {
+					ctx.ui.notify(
+						'Invalid slogan: "". Slogan must be between 1 and 85 characters.',
+						"error",
+					);
+					return null;
+				}
+				if (text.length > 85) {
+					ctx.ui.notify(
+						`Invalid slogan: "${text}". Slogan must be between 1 and 85 characters.`,
+						"error",
+					);
+					return null;
+				}
+				slogan = text;
+				sloganOn = true;
+				h.slogan = text;
+				h.sloganOn = true;
+				return `Slogan: ${text}`;
 			});
 		},
 	});
 
 	pi.registerCommand("hps", {
-		description: "Toggle pkg skills visibility (6 skills | 6|7 skills)",
+		description: "Toggle pkg skills VISIBLE/HIDDEN",
 		handler: async (_args, ctx) => {
 			modifyConfig(ctx, (h) => {
 				showPkgSkills = !showPkgSkills;
@@ -642,11 +825,15 @@ export default function (pi: ExtensionAPI) {
 	});
 
 	pi.registerCommand("hrl", {
-		description: "Toggle resource list visibility (applies on next session)",
+		description:
+			"Toggle resource list VISIBLE/HIDDEN (applies on next session)",
 		handler: async (_args, ctx) => {
 			const s = getSettings();
 			if ((s.ccHeader || {}).disabled) {
-				ctx.ui.notify("pi-cc-header is disabled, use /htg to enable", "info");
+				ctx.ui.notify(
+					"Command unavailable: pi-cc-header disabled. Use /htg to enable.",
+					"info",
+				);
 				return;
 			}
 			s.rsl = s.rsl === false ? true : false;
@@ -655,7 +842,7 @@ export default function (pi: ExtensionAPI) {
 				`Resource list: ${s.rsl !== false ? "HIDDEN" : "VISIBLE"}`,
 				"info",
 			);
-			setTimeout(() => (ctx as any).reload(), 100);
+			setTimeout(() => ctx.ui.reload(), 100);
 		},
 	});
 }

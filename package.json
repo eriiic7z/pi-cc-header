@@ -1,7 +1,7 @@
 {
   "name": "pi-cc-header",
-  "version": "0.9.5",
-  "description": "Claude Code–style startup header for pi — pixel-animated Pi logo with a 9-color palette, toggleable IBM stripes and Minecraft gradient themes",
+  "version": "0.10.0",
+  "description": "Claude Code–style startup header for Pi — pixel-animated Pi logo with a 9-color palette, toggleable IBM stripes and Minecraft gradient themes, paired with a configurable info bar displaying version, model, resource stats, AGENTS.md marker, cwd, and a customizable slogan.",
   "type": "module",
   "keywords": ["pi", "pi-package", "extension", "header", "tui", "claude-code", "animation", "logo", "startup", "status", "color", "theme", "terminal", "open"],
   "license": "MIT",
