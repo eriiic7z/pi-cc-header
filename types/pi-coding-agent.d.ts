@@ -8,7 +8,17 @@ declare module "@earendil-works/pi-coding-agent" {
 		getThinkingLevel(): string;
 		on(
 			event: "session_start",
-			handler: (event: unknown, ctx: ExtensionContext) => void,
+			handler: (
+				event: { reason?: string; previousSessionFile?: string },
+				ctx: ExtensionContext,
+			) => void,
+		): void;
+		on(
+			event: "session_before_switch",
+			handler: (
+				event: { reason?: string; targetSessionFile?: string },
+				ctx: ExtensionContext,
+			) => void,
 		): void;
 		registerCommand(
 			name: string,

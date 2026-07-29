@@ -367,7 +367,7 @@ function computeStats(ctx: ExtensionContext) {
 /* ── 组件：启动头部 ── */
 class PiHeader implements Component {
 	private frame = 0;
-	private readonly timer: NodeJS.Timeout;
+	private readonly timer: NodeJS.Timeout | undefined;
 	private readonly stats: {
 		extensions: { installed: number; residue: number };
 		skills: number;
@@ -380,18 +380,23 @@ class PiHeader implements Component {
 		private readonly pi: ExtensionAPI,
 		private readonly ctx: ExtensionContext,
 		private readonly tui: TUI,
+		skipAnimation: boolean = false,
 	) {
 		this.stats = computeStats(ctx);
-		this.timer = setInterval(() => {
-			if (this.frame < LOGO_FRAMES.length - 1) {
-				this.frame++;
-				this.tui.requestRender();
-			} else {
-				clearInterval(this.timer);
-				this.tui.requestRender();
-			}
-		}, LOGO_INTERVAL);
-		this.timer.unref?.();
+		if (skipAnimation) {
+			this.frame = LOGO_FRAMES.length - 1;
+		} else {
+			this.timer = setInterval(() => {
+				if (this.frame < LOGO_FRAMES.length - 1) {
+					this.frame++;
+					this.tui.requestRender();
+				} else {
+					clearInterval(this.timer);
+					this.tui.requestRender();
+				}
+			}, LOGO_INTERVAL);
+			this.timer?.unref?.();
+		}
 	}
 
 	render(width: number): string[] {
@@ -445,10 +450,12 @@ class PiHeader implements Component {
 
 /* ── 挂载 ── */
 let active: PiHeader | undefined;
+let isResuming = false;
 
 function apply(
 	pi: ExtensionAPI,
 	ctx: ExtensionContext,
+	skipAnimation: boolean = false,
 	clearMode: "full" | "viewport" | "none" = "full",
 ) {
 	if (ctx.mode !== "tui") return;
@@ -459,7 +466,7 @@ function apply(
 	}
 	ctx.ui.setHeader((tui) => {
 		active?.dispose();
-		active = new PiHeader(pi, ctx, tui);
+		active = new PiHeader(pi, ctx, tui, skipAnimation);
 		return active;
 	});
 }
@@ -500,11 +507,17 @@ export default function (pi: ExtensionAPI) {
 		recomputeFrames();
 		active?.dispose();
 		active = undefined;
-		apply(pi, ctx, "none");
+		apply(pi, ctx, false, "none");
 		ctx.ui.notify(msg, "info");
 	};
 
-	pi.on("session_start", (_event, ctx) => {
+	pi.on("session_before_switch", (event, _ctx) => {
+		if (event.reason === "resume") {
+			isResuming = true;
+		}
+	});
+
+	pi.on("session_start", (event, ctx) => {
 		const s = getSettings();
 		const h = s.ccHeader || {};
 		if (h.disabled) return;
@@ -514,17 +527,22 @@ export default function (pi: ExtensionAPI) {
 		showPkgSkills = h.pkg ?? false;
 		if (h.color && CMAP[h.color]) logoColorKey = h.color;
 		recomputeFrames();
+		const skipAnimation =
+			event.reason === "reload" ||
+			isResuming ||
+			(event.reason === "startup" &&
+				(process.argv.includes("-r") || process.argv.includes("--resume")));
+		if (isResuming) isResuming = false;
 		if (s.rsl !== false) {
 			s.quietStartup = true;
 			s.clearOnStart = true;
 			saveSettings(s);
-			process.stdout.write("\x1b[2J\x1b[3J\x1b[H");
 		} else {
 			s.quietStartup = false;
 			s.clearOnStart = false;
 			saveSettings(s);
 		}
-		setTimeout(() => apply(pi, ctx), 0);
+		setTimeout(() => apply(pi, ctx, skipAnimation), 0);
 	});
 
 	pi.registerCommand("htg", {
@@ -540,7 +558,7 @@ export default function (pi: ExtensionAPI) {
 				s.clearOnStart = true;
 				saveSettings(s);
 				process.stdout.write("\x1b[2J\x1b[3J\x1b[H");
-				apply(pi, ctx, "viewport");
+				apply(pi, ctx, false, "viewport");
 				ctx.ui.notify("pi-cc-header enabled", "info");
 			} else {
 				// Disable
