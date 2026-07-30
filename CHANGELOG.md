@@ -4,6 +4,17 @@
 
 All notable changes to pi-cc-header.
 
+## v1.0.0 (2026-07-30)
+
+### Added
+
+- `/hcl` command — clear all pi-cc-header keys from settings.json and remove the header, for a clean uninstall (run before `pi uninstall npm:pi-cc-header`).
+
+### Changed
+
+- Default animation speed increased from 25ms to 50ms.
+- README restructured: reordered Features list to follow visual-to-content flow, renamed "Disabling and resetting" to "Reset, disable & uninstall", added uninstall guidance with `/hcl`, and added an important note in the Install section urging users to read the management section.
+
 ## v0.11.1 (2026-07-30)
 
 ### Fixed
@@ -369,6 +380,17 @@ All notable changes to pi-cc-header.
 ---
 
 ## 中文
+
+## v1.0.0 (2026-07-30)
+
+### 新增
+
+- `/hcl` 命令——清空 settings.json 中所有 pi-cc-header 配置并移除头部，用于卸载前清理（先 `/hcl`，再 `pi uninstall npm:pi-cc-header`）。
+
+### 变更
+
+- 默认动画速度从 25ms 调整为 50ms。
+- README 重构：功能列表按视觉到内容流程重新排序，"禁用与重置"小节更名为"重置、禁用与卸载"并补充 `/hcl` 卸载指引，安装段新增重要提示引导用户阅读管理小节。
 
 ## v0.11.1 (2026-07-30)
 

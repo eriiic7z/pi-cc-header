@@ -60,7 +60,7 @@ const DEFAULT_STATE: CCHeaderState = {
 	gradientOn: true,
 	stripeEnabled: true,
 	showPkgSkills: false,
-	logoInterval: SPEEDS[0],
+	logoInterval: SPEEDS[1],
 	slogan: "Code something that makes you proud",
 	sloganOn: true,
 	sloganColor: true,
@@ -1057,6 +1057,25 @@ export default function (pi: ExtensionAPI) {
 					s.showPkgSkills = !s.showPkgSkills;
 					return `Pkg skills: ${s.showPkgSkills ? "VISIBLE" : "HIDDEN"}`;
 				},
+			);
+		},
+	});
+
+	pi.registerCommand("hcl", {
+		description: "Clear all pi-cc-header config for clean uninstall",
+		handler: async (_args, ctx) => {
+			const s = readSettings(settingsPath);
+			delete s.ccHeader;
+			delete s.quietStartup;
+			delete s.clearOnStart;
+			saveSettings(s);
+			state = { ...DEFAULT_STATE, disabled: true };
+			active?.dispose();
+			active = undefined;
+			ctx.ui.setHeader(undefined);
+			ctx.ui.notify(
+				"pi-cc-header Config: cleared. You can now uninstall the package.",
+				"info",
 			);
 		},
 	});
