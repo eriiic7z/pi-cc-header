@@ -14,6 +14,20 @@ All notable changes to pi-cc-header.
 
 - Removed `/hrl` command (`ctx.ui.reload()` API no longer available in current Pi version).
 
+### Changed
+
+- Architecture: consolidated 11 module-level mutable variables into a single typed `CCHeaderState` object with `DEFAULT_STATE` as the sole source of truth.
+- Merged `modifyConfig` and `directApply` into a single `updateState` function, eliminating ~30 lines of duplicated IO and re-mount logic.
+- `/hsp` animation speed now takes effect immediately (replaced `setInterval` with recursive `setTimeout` that reads current interval on each tick).
+- Frame recomputation now guarded by a dirty flag — recalculated only when logo color, gradient, or stripe settings change; slogan and speed changes skip the recompute.
+- Gradient level lookup now uses an explicit `GRADIENT_LEVEL` map instead of depending on the implicit naming convention `cg(+color[1]-1)`.
+- Duplicate `visibleWidth(slogan)` evaluation eliminated in render path.
+
+### Fixed
+
+- Fixed `/hdf` reset not persisting across sessions — `configStartupEnabled` now writes all settings atomically.
+- Fixed `/htg` toggle having no effect — disable branch now writes `quietStartup` and `clearOnStart` to the same settings snapshot before saving.
+
 ## v0.10.0 (2026-07-30)
 
 ### Added

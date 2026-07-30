@@ -8,17 +8,22 @@ import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import { readFileSync, writeFileSync, readdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 
-/* ── 品牌色 ── */
+/* ── 类型 ── */
+interface CCHeaderState {
+	logoColorKey: string;
+	versionColored: number; // 0=off 1=Pi only 2=Pi+ver
+	gradientOn: boolean;
+	stripeEnabled: boolean;
+	showPkgSkills: boolean;
+	logoInterval: number;
+	slogan: string;
+	sloganOn: boolean;
+	sloganColor: boolean;
+	disabled: boolean;
+}
+
+/* ── 常量 ── */
 const SPEEDS = [25, 50, 75, 100] as const;
-let logoInterval: (typeof SPEEDS)[number] = SPEEDS[0];
-let slogan = "Code something that makes you proud";
-let /* biome-ignore format: mutable */ sloganOn = true;
-let /* biome-ignore format: mutable */ sloganColor = true;
-let stripeEnabled = true;
-let versionColored = 1;
-let gradientOn = true;
-let logoColorKey = "c";
-let showPkgSkills = false;
 const COLOR_NAMES: Record<string, string> = {
 	a: "anthropic",
 	c: "clawd",
@@ -30,17 +35,17 @@ const COLOR_NAMES: Record<string, string> = {
 	b: "blue",
 	p: "purple",
 };
-const DEFAULT_CC_HEADER = {
-	lines: true,
-	color: "c",
-	ver: 1,
-	grad: true,
-	pkg: false,
-	disabled: false,
-	speed: SPEEDS[0],
-	sloganColor: true,
+const DEFAULT_STATE: CCHeaderState = {
+	logoColorKey: "c",
+	versionColored: 1,
+	gradientOn: true,
+	stripeEnabled: true,
+	showPkgSkills: false,
+	logoInterval: SPEEDS[0],
 	slogan: "Code something that makes you proud",
 	sloganOn: true,
+	sloganColor: true,
+	disabled: false,
 };
 const CMAP: Record<string, string> = {
 	a: "38;2;217;119;87",
@@ -90,6 +95,21 @@ const GMAP: Record<string, string[]> = {
 	],
 	c: ["38;2;251;73;52", "38;2;220;60;40", "38;2;190;45;30", "38;2;155;30;20"],
 };
+// 显式层级索引 → 消除 cg(+color[1]-1) 的隐式命名依赖
+const GRADIENT_LEVEL: Record<string, number> = {
+	l1: 0,
+	l2: 1,
+	l3: 2,
+	l4: 3,
+	s1: 0,
+	s2: 1,
+	s3: 2,
+	s4: 3,
+};
+
+/* ── 运行时状态（单一 state 对象，消除 11 个模块级 let）── */
+let state: CCHeaderState = { ...DEFAULT_STATE };
+let framesDirty = true; // 仅颜色/渐变/横线变化时置脏
 
 /* ── Pi 官方 Logo 动画（提取自 pi.dev/install.sh）── */
 type LogoColor =
@@ -158,7 +178,7 @@ const LOGO_FRAMES: LogoFrame[] = [
 ];
 
 const colorCell = (color: LogoColor): string => {
-	const cg = (n: number) => GMAP[logoColorKey]?.[n] ?? "34";
+	const cg = (n: number) => GMAP[state.logoColorKey]?.[n] ?? "34";
 	switch (color) {
 		case "cyan":
 			return "\x1b[36m██\x1b[39m";
@@ -172,19 +192,18 @@ const colorCell = (color: LogoColor): string => {
 		case "white":
 			return "\x1b[39m██";
 		case "logo":
-			return `\x1b[${CMAP[logoColorKey]}m██\x1b[39m`;
+			return `\x1b[${CMAP[state.logoColorKey]}m██\x1b[39m`;
 		case "logoStripe":
-			return `\x1b[${CMAP[logoColorKey]}m──\x1b[39m`;
+			return `\x1b[${CMAP[state.logoColorKey]}m──\x1b[39m`;
 		case "l1":
 		case "l2":
 		case "l3":
 		case "l4":
-			return `\x1b[${cg(+color[1] - 1)}m██\x1b[39m`;
 		case "s1":
 		case "s2":
 		case "s3":
 		case "s4":
-			return `\x1b[${cg(+color[1] - 1)}m──\x1b[39m`;
+			return `\x1b[${cg(GRADIENT_LEVEL[color])}m${color[0] === "l" ? "██" : "──"}\x1b[39m`;
 		default:
 			return "  ";
 	}
@@ -211,9 +230,17 @@ function logoCellColor(frame: LogoFrame, y: number, x: number): LogoColor {
 
 	if (frame.phase === 6) {
 		const isPi = has("3,2 3,3 3,4 4,4 4,2 5,2 5,3 5,5 6,2 6,5");
-		const lvl = gradientOn ? (y <= 3 ? 1 : y === 4 ? 2 : y === 5 ? 3 : 4) : 0;
+		const lvl = state.gradientOn
+			? y <= 3
+				? 1
+				: y === 4
+					? 2
+					: y === 5
+						? 3
+						: 4
+			: 0;
 		if (isPi) return lvl > 0 ? (("l" + lvl) as LogoColor) : "logo";
-		return stripeEnabled && y >= 2 && y <= 7 && x <= 6
+		return state.stripeEnabled && y >= 2 && y <= 7 && x <= 6
 			? lvl > 0
 				? (("s" + lvl) as LogoColor)
 				: "logoStripe"
@@ -255,6 +282,7 @@ let PRECOMPUTED_LOGO_FRAMES: string[][] = LOGO_FRAMES.map((_, i) =>
 
 function recomputeFrames(): void {
 	PRECOMPUTED_LOGO_FRAMES = LOGO_FRAMES.map((_, i) => piLogoFrame(i));
+	framesDirty = false;
 }
 
 /* ── 工具函数 ── */
@@ -408,14 +436,8 @@ function invalidateStats(): void {
 /* ── 组件：启动头部 ── */
 class PiHeader implements Component {
 	private frame = 0;
-	private readonly timer: NodeJS.Timeout;
-	private readonly stats: {
-		extensions: { installed: number; residue: number };
-		skills: number;
-		pkgSkills: number;
-		prompts: number;
-		agents: string;
-	};
+	private timer: ReturnType<typeof setTimeout> | null = null;
+	private readonly stats: ReturnType<typeof computeStats>;
 
 	constructor(
 		private readonly pi: ExtensionAPI,
@@ -424,15 +446,19 @@ class PiHeader implements Component {
 	) {
 		cachedStats ??= computeStats(ctx);
 		this.stats = cachedStats!;
-		this.timer = setInterval(() => {
+
+		const tick = () => {
 			if (this.frame < LOGO_FRAMES.length - 1) {
 				this.frame++;
 				this.tui.requestRender();
+				// 递归 setTimeout：每次动态读取 state.logoInterval，/hsp 热生效
+				this.timer = setTimeout(tick, state.logoInterval);
 			} else {
-				clearInterval(this.timer);
+				this.timer = null;
 				this.tui.requestRender();
 			}
-		}, logoInterval);
+		};
+		this.timer = setTimeout(tick, state.logoInterval);
 		this.timer.unref?.();
 	}
 
@@ -447,7 +473,7 @@ class PiHeader implements Component {
 		const model = this.ctx.model?.id ?? "Default";
 		const effort = this.pi.getThinkingLevel();
 		const cwd = formatCwd(this.ctx.cwd);
-		const skillText = showPkgSkills
+		const skillText = state.showPkgSkills
 			? `${this.stats.skills}|${this.stats.pkgSkills} skills`
 			: `${this.stats.skills} skills`;
 		const extText =
@@ -457,20 +483,26 @@ class PiHeader implements Component {
 		const statsLine = `${skillText} · ${this.stats.prompts} prompts · ${extText}`;
 
 		const piText =
-			versionColored >= 2
-				? `\x1b[${CMAP[logoColorKey]}mPi v${VERSION}\x1b[39m`
-				: versionColored >= 1
-					? `\x1b[${CMAP[logoColorKey]}mPi\x1b[39m ${muted(`v${VERSION}`)}`
+			state.versionColored >= 2
+				? `\x1b[${CMAP[state.logoColorKey]}mPi v${VERSION}\x1b[39m`
+				: state.versionColored >= 1
+					? `\x1b[${CMAP[state.logoColorKey]}mPi\x1b[39m ${muted(`v${VERSION}`)}`
 					: muted(`Pi v${VERSION}`);
 		const modelLine = `${model} · ${effort}${this.stats.agents ? `  |  ${this.stats.agents}` : ""}`;
-		const info: Record<number, string> = sloganOn
+
+		// 提取 visibleWidth 为变量，消除同表达式内的重复计算
+		const sloganW = visibleWidth(state.slogan);
+		const sloganText =
+			sloganW > infoMaxWidth
+				? truncateToWidth(state.slogan, infoMaxWidth - 3, "") + "..."
+				: state.slogan;
+
+		const info: Record<number, string> = state.sloganOn
 			? {
 					2: piText,
-					3: sloganColor
-						? `\x1b[1m\x1b[${CMAP[logoColorKey]}m${visibleWidth(slogan) > infoMaxWidth ? truncateToWidth(slogan, infoMaxWidth - 3, "") + "..." : slogan}\x1b[39m\x1b[22m`
-						: muted(
-								`\x1b[1m${visibleWidth(slogan) > infoMaxWidth ? truncateToWidth(slogan, infoMaxWidth - 3, "") + "..." : slogan}\x1b[22m`,
-							),
+					3: state.sloganColor
+						? `\x1b[1m\x1b[${CMAP[state.logoColorKey]}m${sloganText}\x1b[39m\x1b[22m`
+						: muted(`\x1b[1m${sloganText}\x1b[22m`),
 					4: muted(modelLine),
 					5: muted(statsLine),
 				}
@@ -491,7 +523,7 @@ class PiHeader implements Component {
 
 	invalidate(): void {}
 	dispose(): void {
-		clearInterval(this.timer);
+		if (this.timer != null) clearTimeout(this.timer);
 	}
 }
 
@@ -516,6 +548,102 @@ function apply(
 	});
 }
 
+/* ── 状态 ⇄ 配置序列化 ── */
+function stateFromConfig(h: Record<string, any>): CCHeaderState {
+	return {
+		logoColorKey:
+			h.color && CMAP[h.color] ? h.color : DEFAULT_STATE.logoColorKey,
+		versionColored:
+			typeof h.ver === "number" ? h.ver : DEFAULT_STATE.versionColored,
+		gradientOn: typeof h.grad === "boolean" ? h.grad : DEFAULT_STATE.gradientOn,
+		stripeEnabled:
+			typeof h.lines === "boolean" ? h.lines : DEFAULT_STATE.stripeEnabled,
+		showPkgSkills:
+			typeof h.pkg === "boolean" ? h.pkg : DEFAULT_STATE.showPkgSkills,
+		logoInterval:
+			typeof h.speed === "number" && h.speed > 0
+				? h.speed
+				: DEFAULT_STATE.logoInterval,
+		slogan: typeof h.slogan === "string" ? h.slogan : DEFAULT_STATE.slogan,
+		sloganOn:
+			typeof h.sloganOn === "boolean" ? h.sloganOn : DEFAULT_STATE.sloganOn,
+		sloganColor:
+			typeof h.sloganColor === "boolean"
+				? h.sloganColor
+				: DEFAULT_STATE.sloganColor,
+		disabled:
+			typeof h.disabled === "boolean" ? h.disabled : DEFAULT_STATE.disabled,
+	};
+}
+
+function stateToConfig(): Record<string, any> {
+	return {
+		color: state.logoColorKey,
+		ver: state.versionColored,
+		grad: state.gradientOn,
+		lines: state.stripeEnabled,
+		pkg: state.showPkgSkills,
+		speed: state.logoInterval,
+		slogan: state.slogan,
+		sloganOn: state.sloganOn,
+		sloganColor: state.sloganColor,
+		disabled: state.disabled,
+	};
+}
+
+/* ── 统一配置更新（合并 modifyConfig + directApply）── */
+function updateState(
+	pi: ExtensionAPI,
+	ctx: ExtensionContext,
+	settingsPath: string,
+	updater: (s: CCHeaderState) => string | null,
+	opts?: { skipDisabledCheck?: boolean },
+): void {
+	if (!opts?.skipDisabledCheck && state.disabled) {
+		ctx.ui.notify(
+			"Command unavailable: pi-cc-header disabled. Use /htg to enable.",
+			"info",
+		);
+		return;
+	}
+
+	const prevColor = state.logoColorKey;
+	const prevGrad = state.gradientOn;
+	const prevStripe = state.stripeEnabled;
+
+	const msg = updater(state);
+	if (msg === null) return; // null = 中止（已自行 notify 错误）
+
+	// 脏标记：仅颜色/渐变/横线变化需要重算帧
+	if (
+		state.logoColorKey !== prevColor ||
+		state.gradientOn !== prevGrad ||
+		state.stripeEnabled !== prevStripe
+	) {
+		framesDirty = true;
+	}
+	if (framesDirty) recomputeFrames();
+
+	// 持久化
+	const s = readSettings(settingsPath);
+	s.ccHeader = stateToConfig();
+	writeFileSync(settingsPath, JSON.stringify(s, null, 2) + "\n", "utf-8");
+
+	// 重新挂载头部
+	active?.dispose();
+	active = undefined;
+	apply(pi, ctx, "none");
+	ctx.ui.notify(msg, "info");
+}
+
+function readSettings(settingsPath: string): Record<string, any> {
+	try {
+		return JSON.parse(readFileSync(settingsPath, "utf-8"));
+	} catch {
+		return {};
+	}
+}
+
 /* ── 入口 ── */
 export default function (pi: ExtensionAPI) {
 	const settingsPath = join(
@@ -524,15 +652,10 @@ export default function (pi: ExtensionAPI) {
 		"agent",
 		"settings.json",
 	);
-	const getSettings = (): Record<string, any> => {
-		try {
-			return JSON.parse(readFileSync(settingsPath, "utf-8"));
-		} catch {
-			return {};
-		}
-	};
-	const saveSettings = (s: Record<string, any>) =>
+
+	const saveSettings = (s: Record<string, any>) => {
 		writeFileSync(settingsPath, JSON.stringify(s, null, 2) + "\n", "utf-8");
+	};
 
 	const configStartupEnabled = (s: Record<string, any>) => {
 		s.quietStartup = true;
@@ -541,78 +664,35 @@ export default function (pi: ExtensionAPI) {
 		process.stdout.write("\x1b[2J\x1b[3J\x1b[H");
 	};
 
-	const directApply = (
-		ctx: ExtensionContext,
-		update: (h: Record<string, any>) => void,
-	): void => {
-		const s = getSettings();
-		const h = s.ccHeader || {};
-		update(h);
-		s.ccHeader = h;
-		saveSettings(s);
-		recomputeFrames();
-		active?.dispose();
-		active = undefined;
-		apply(pi, ctx, "none");
-	};
-
-	const modifyConfig = (
-		ctx: ExtensionContext,
-		update: (h: Record<string, any>, s: Record<string, any>) => string | null,
-	) => {
-		const s = getSettings();
-		const h = s.ccHeader || {};
-		if (h.disabled) {
-			ctx.ui.notify(
-				"Command unavailable: pi-cc-header disabled. Use /htg to enable.",
-				"info",
-			);
-			return;
-		}
-		const msg = update(h, s);
-		if (msg === null) return;
-		s.ccHeader = h;
-		saveSettings(s);
-		recomputeFrames();
-		active?.dispose();
-		active = undefined;
-		apply(pi, ctx, "none");
-		ctx.ui.notify(msg, "info");
-	};
-
 	pi.on("session_start", (_event, ctx) => {
-		const s = getSettings();
+		const s = readSettings(settingsPath);
 		const h = s.ccHeader || {};
-		if (h.disabled) return;
+		state = stateFromConfig(h);
+		if (state.disabled) return;
 		invalidateStats();
-		stripeEnabled = h.lines ?? true;
-		versionColored = h.ver ?? 0;
-		gradientOn = h.grad ?? true;
-		showPkgSkills = h.pkg ?? false;
-		if (typeof h.slogan === "string") slogan = h.slogan;
-		if (typeof h.sloganOn === "boolean") sloganOn = h.sloganOn;
-		if (typeof h.sloganColor === "boolean") sloganColor = h.sloganColor;
-		if (typeof h.speed === "number" && h.speed > 0) logoInterval = h.speed;
-		if (h.color && CMAP[h.color]) logoColorKey = h.color;
+		framesDirty = true;
 		recomputeFrames();
+		// setTimeout(0): 延迟到 TUI 管道就绪后再挂载 header，避免与其他初始化竞态
 		setTimeout(() => apply(pi, ctx), 0);
 	});
 
 	pi.registerCommand("htg", {
 		description: "Toggle pi-cc-header ENABLED/DISABLED",
 		handler: async (_args, ctx) => {
-			const s = getSettings();
+			const s = readSettings(settingsPath);
 			const h = s.ccHeader || {};
-			if (h.disabled) {
-				s.ccHeader = h;
+			if (state.disabled) {
+				state.disabled = false;
 				h.disabled = false;
+				s.ccHeader = h;
 				invalidateStats();
 				configStartupEnabled(s);
 				apply(pi, ctx, "none");
 				ctx.ui.notify("pi-cc-header: ENABLED", "info");
 			} else {
-				s.ccHeader = h;
+				state.disabled = true;
 				h.disabled = true;
+				s.ccHeader = h;
 				s.quietStartup = false;
 				s.clearOnStart = false;
 				saveSettings(s);
@@ -626,13 +706,13 @@ export default function (pi: ExtensionAPI) {
 			}
 		},
 	});
+
 	pi.registerCommand("hi", {
 		description: "Toggle IBM-style ON/OFF",
 		handler: async (_args, ctx) => {
-			modifyConfig(ctx, (h) => {
-				stripeEnabled = !stripeEnabled;
-				h.lines = stripeEnabled;
-				return `IBM-style: ${stripeEnabled ? "ON" : "OFF"}`;
+			updateState(pi, ctx, settingsPath, (s) => {
+				s.stripeEnabled = !s.stripeEnabled;
+				return `IBM-style: ${s.stripeEnabled ? "ON" : "OFF"}`;
 			});
 		},
 	});
@@ -643,12 +723,12 @@ export default function (pi: ExtensionAPI) {
 		handler: async (args, ctx) => {
 			if (!args) {
 				ctx.ui.notify(
-					`Header color: ${logoColorKey} (${COLOR_NAMES[logoColorKey]}). Available: ${Object.keys(CMAP).join(" ")}`,
+					`Header color: ${state.logoColorKey} (${COLOR_NAMES[state.logoColorKey]}). Available: ${Object.keys(CMAP).join(" ")}`,
 					"info",
 				);
 				return;
 			}
-			modifyConfig(ctx, (h) => {
+			updateState(pi, ctx, settingsPath, (s) => {
 				if (!CMAP[args]) {
 					ctx.ui.notify(
 						`Invalid color: "${args}". Available: ${Object.keys(CMAP).join(" ")}`,
@@ -656,8 +736,7 @@ export default function (pi: ExtensionAPI) {
 					);
 					return null;
 				}
-				logoColorKey = args;
-				h.color = args;
+				s.logoColorKey = args;
 				return `Color: ${args}`;
 			});
 		},
@@ -675,17 +754,22 @@ export default function (pi: ExtensionAPI) {
 					);
 					return;
 				}
-				versionColored = v === "all" ? 2 : v === "pi" ? 1 : 0;
-				directApply(ctx, (h) => {
-					h.ver = versionColored;
-				});
+				updateState(
+					pi,
+					ctx,
+					settingsPath,
+					(s) => {
+						s.versionColored = v === "all" ? 2 : v === "pi" ? 1 : 0;
+						return null; // 通知由外层处理
+					},
+					{ skipDisabledCheck: true },
+				);
 				ctx.ui.notify(`Version label color: ${v}`, "info");
 				return;
 			}
-			modifyConfig(ctx, (h) => {
-				versionColored = (versionColored + 1) % 3;
-				h.ver = versionColored;
-				return `Version color: ${["OFF", "Pi only", "Pi+ver"][versionColored]}`;
+			updateState(pi, ctx, settingsPath, (s) => {
+				s.versionColored = (s.versionColored + 1) % 3;
+				return `Version color: ${["OFF", "Pi only", "Pi+ver"][s.versionColored]}`;
 			});
 		},
 	});
@@ -693,10 +777,9 @@ export default function (pi: ExtensionAPI) {
 	pi.registerCommand("hm", {
 		description: "Toggle Minecraft-style ON/OFF",
 		handler: async (_args, ctx) => {
-			modifyConfig(ctx, (h) => {
-				gradientOn = !gradientOn;
-				h.grad = gradientOn;
-				return `Minecraft-style: ${gradientOn ? "ON" : "OFF"}`;
+			updateState(pi, ctx, settingsPath, (s) => {
+				s.gradientOn = !s.gradientOn;
+				return `Minecraft-style: ${s.gradientOn ? "ON" : "OFF"}`;
 			});
 		},
 	});
@@ -704,21 +787,12 @@ export default function (pi: ExtensionAPI) {
 	pi.registerCommand("hdf", {
 		description: "Reset pi-cc-header to developer defaults (overwrites config)",
 		handler: async (_args, ctx) => {
-			const s = getSettings();
-			const h: Record<string, any> = {};
-			stripeEnabled = true;
-			logoColorKey = "c";
-			versionColored = 1;
-			gradientOn = true;
-			showPkgSkills = false;
-			sloganColor = true;
-			slogan = "Code something that makes you proud";
-			sloganOn = true;
-			logoInterval = SPEEDS[0];
-			Object.assign(h, DEFAULT_CC_HEADER);
-			s.ccHeader = h;
-			configStartupEnabled(s);
+			state = { ...DEFAULT_STATE };
+			framesDirty = true;
 			recomputeFrames();
+			const s = readSettings(settingsPath);
+			s.ccHeader = stateToConfig();
+			configStartupEnabled(s);
 			active?.dispose();
 			active = undefined;
 			apply(pi, ctx, "none");
@@ -732,7 +806,7 @@ export default function (pi: ExtensionAPI) {
 		handler: async (args, ctx) => {
 			if (!args) {
 				ctx.ui.notify(
-					`Animation speed: ${logoInterval}ms. Available: ${SPEEDS.join(" ")}`,
+					`Animation speed: ${state.logoInterval}ms. Available: ${SPEEDS.join(" ")}`,
 					"info",
 				);
 				return;
@@ -745,11 +819,10 @@ export default function (pi: ExtensionAPI) {
 				);
 				return;
 			}
-			logoInterval = n as (typeof SPEEDS)[number];
-			directApply(ctx, (h) => {
-				h.speed = logoInterval;
+			updateState(pi, ctx, settingsPath, (s) => {
+				s.logoInterval = n as (typeof SPEEDS)[number];
+				return `Animation speed: ${s.logoInterval}ms`;
 			});
-			ctx.ui.notify(`Animation speed: ${logoInterval}ms`, "info");
 		},
 	});
 
@@ -757,29 +830,25 @@ export default function (pi: ExtensionAPI) {
 		description:
 			"Slogan: no args = on/off; <text> = set; -c = toggle color; -d = delete",
 		handler: async (args, ctx) => {
-			modifyConfig(ctx, (h) => {
+			updateState(pi, ctx, settingsPath, (s) => {
 				if (!args) {
-					if (!slogan) {
+					if (!s.slogan) {
 						ctx.ui.notify(
 							"Command unavailable: no slogan set. Use /hs <text> to set one.",
 							"error",
 						);
 						return null;
 					}
-					sloganOn = !sloganOn;
-					h.sloganOn = sloganOn;
-					return sloganOn ? "Slogan: ON" : "Slogan: OFF";
+					s.sloganOn = !s.sloganOn;
+					return s.sloganOn ? "Slogan: ON" : "Slogan: OFF";
 				}
 				if (args === "-c") {
-					sloganColor = !sloganColor;
-					h.sloganColor = sloganColor;
-					return `Slogan color: ${sloganColor ? "ON" : "OFF"}`;
+					s.sloganColor = !s.sloganColor;
+					return `Slogan color: ${s.sloganColor ? "ON" : "OFF"}`;
 				}
 				if (args === "-d") {
-					slogan = "";
-					sloganOn = false;
-					h.slogan = "";
-					h.sloganOn = false;
+					s.slogan = "";
+					s.sloganOn = false;
 					return "Slogan: deleted";
 				}
 				const text = args.trim();
@@ -797,10 +866,8 @@ export default function (pi: ExtensionAPI) {
 					);
 					return null;
 				}
-				slogan = text;
-				sloganOn = true;
-				h.slogan = text;
-				h.sloganOn = true;
+				s.slogan = text;
+				s.sloganOn = true;
 				return `Slogan: ${text}`;
 			});
 		},
@@ -809,10 +876,9 @@ export default function (pi: ExtensionAPI) {
 	pi.registerCommand("hps", {
 		description: "Toggle pkg skills VISIBLE/HIDDEN",
 		handler: async (_args, ctx) => {
-			modifyConfig(ctx, (h) => {
-				showPkgSkills = !showPkgSkills;
-				h.pkg = showPkgSkills;
-				return `Pkg skills: ${showPkgSkills ? "VISIBLE" : "HIDDEN"}`;
+			updateState(pi, ctx, settingsPath, (s) => {
+				s.showPkgSkills = !s.showPkgSkills;
+				return `Pkg skills: ${s.showPkgSkills ? "VISIBLE" : "HIDDEN"}`;
 			});
 		},
 	});
