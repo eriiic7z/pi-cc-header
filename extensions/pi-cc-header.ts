@@ -595,14 +595,6 @@ export default function (pi: ExtensionAPI) {
 		if (typeof h.speed === "number" && h.speed > 0) logoInterval = h.speed;
 		if (h.color && CMAP[h.color]) logoColorKey = h.color;
 		recomputeFrames();
-		// persist settings to disk
-		if (s.rsl !== false) {
-			configStartupEnabled(s);
-		} else {
-			s.quietStartup = false;
-			s.clearOnStart = false;
-			saveSettings(s);
-		}
 		setTimeout(() => apply(pi, ctx), 0);
 	});
 
@@ -614,6 +606,7 @@ export default function (pi: ExtensionAPI) {
 			if (h.disabled) {
 				s.ccHeader = h;
 				h.disabled = false;
+				invalidateStats();
 				configStartupEnabled(s);
 				apply(pi, ctx, "none");
 				ctx.ui.notify("pi-cc-header: ENABLED", "info");
@@ -821,28 +814,6 @@ export default function (pi: ExtensionAPI) {
 				h.pkg = showPkgSkills;
 				return `Pkg skills: ${showPkgSkills ? "VISIBLE" : "HIDDEN"}`;
 			});
-		},
-	});
-
-	pi.registerCommand("hrl", {
-		description:
-			"Toggle resource list VISIBLE/HIDDEN (applies on next session)",
-		handler: async (_args, ctx) => {
-			const s = getSettings();
-			if ((s.ccHeader || {}).disabled) {
-				ctx.ui.notify(
-					"Command unavailable: pi-cc-header disabled. Use /htg to enable.",
-					"info",
-				);
-				return;
-			}
-			s.rsl = s.rsl === false ? true : false;
-			saveSettings(s);
-			ctx.ui.notify(
-				`Resource list: ${s.rsl !== false ? "HIDDEN" : "VISIBLE"}`,
-				"info",
-			);
-			setTimeout(() => ctx.ui.reload(), 100);
 		},
 	});
 }

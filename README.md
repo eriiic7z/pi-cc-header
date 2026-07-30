@@ -24,7 +24,6 @@ Takes effect on your **next session (window, same below)** or **`/reload`**.
 - Version number coloring
 - IBM-style horizontal stripes
 - Minecraft-style pixel theme and 4-level 24-bit true-color gradient
-- Startup resource list visibility control
 
 ![pi-cc-header demo](https://raw.githubusercontent.com/eriiic7z/pi-cc-header/main/assets/demo.gif)
 
@@ -36,7 +35,6 @@ Takes effect on your **next session (window, same below)** or **`/reload`**.
 | `/hv` | Cycle version color: OFF → Pi only → Pi+ver | Immediate |
 | `/hi` | Toggle IBM-style on/off | Immediate |
 | `/hm` | Toggle Minecraft-style on/off | Immediate |
-| `/hrl` | Toggle resource list visibility | Next session |
 | `/hps` | Toggle pkg skills visibility (`6 skills` / `6/7 skills`) | Immediate |
 | `/hdf` | Reset to developer defaults | Immediate |
 | `/htg` | Enable / disable pi-cc-header | Next session |
@@ -79,7 +77,6 @@ pi install npm:pi-cc-header
 - 版本号颜色设定
 - IBM 风格水平横线
 - Minecraft 风格像素主题，4 级 24-bit 真彩色渐变
-- 启动时资源列表可见性控制
 
 ![pi-cc-header 演示](https://raw.githubusercontent.com/eriiic7z/pi-cc-header/main/assets/demo.gif)
 
@@ -91,7 +88,6 @@ pi install npm:pi-cc-header
 | `/hv` | 切换版本号颜色模式 | 即时生效 |
 | `/hi` | 开关 IBM 横线 | 即时生效 |
 | `/hm` | 开关 Minecraft 风格 | 即时生效 |
-| `/hrl` | 切换资源清单显示/隐藏 | 下一次会话生效 |
 | `/hps` | 切换随包 skills 可见性(`6 skills` / `6/7 skills`) | 即时生效 |
 | `/hdf` | 恢复开发者默认配置 | 即时生效 |
 | `/htg` | 启用 / 禁用 pi-cc-header | 下一次会话生效 |

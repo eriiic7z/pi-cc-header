@@ -4,6 +4,16 @@
 
 All notable changes to pi-cc-header.
 
+## v0.10.1 (unreleased)
+
+### Fixed
+
+- Fixed `/reload` causing a phantom newline in the input area when pi-cc-header is enabled.
+
+### Removed
+
+- Removed `/hrl` command (`ctx.ui.reload()` API no longer available in current Pi version).
+
 ## v0.10.0 (2026-07-30)
 
 ### Added
