@@ -4,29 +4,51 @@
 
 All notable changes to pi-cc-header.
 
-## v0.10.1 (unreleased)
+## v0.11.0 (2026-07-30)
 
-### Fixed
+### Architecture
 
+- Consolidated 11 module-level mutable variables into a single typed `CCHeaderState` object with `DEFAULT_STATE` as the sole source of truth.
+- Merged `modifyConfig` and `directApply` into `updateState()` — single state-update pipeline with dirty-flag guard, frame recompute, and disabled-state check.
+- Extracted `reapply()` helper — unified persisting + header re-mount sequence for all 9 commands.
+- Added `SettingsFile` interface for settings.json structure (`ccHeader`, `quietStartup`, `clearOnStart`, `packages`).
+- Added `pick<T>()` utility — eliminates 9 lines of repeated guard + fallback patterns in `stateFromConfig`.
+
+### Performance
+
+- Render hot path: info panel cached per terminal width (`cachedInfoRows` + `cachedInfoWidth`) — 14 of 15 animation frames skip `padRight`/`truncateToWidth`/`visibleWidth` recompute.
+- Frame computation hot path: 11 coordinate strings pre-parsed as `Set<string>` / `[number, number][]` constants, eliminating runtime `split` / `map` / `Number` calls.
+- Dirty-flag gate (`framesDirty`): frame recompute triggered only when logo color, gradient, or stripe settings change — slogan and speed changes skip recompute entirely.
+- Duplicate `infoMaxWidth` computation eliminated in cached render path.
+
+### Bugfixes
+
+- Fixed `/hs` error messages showing literal `${MAX_SLOGAN_LENGTH}` instead of `85` (single-quote → backtick template literal).
+- Fixed `/hv <all|pi|off>` missing disabled-state guard — now returns "Command unavailable" when pi-cc-header is disabled.
+- Fixed `/hdf` reset preserving stale stats — added `invalidateStats()` before creating new `PiHeader`.
+- Fixed `readSettings` silent JSON parse failure → now renames corrupted file to `.bak.json` before writing fresh defaults, preventing permanent config loss.
+- Fixed `stateFromConfig` speed validation gap — `logoInterval` now constrained to `SPEEDS` array, rejecting arbitrary numbers from manual settings.json edits.
 - Fixed `/reload` causing a phantom newline in the input area when pi-cc-header is enabled.
+
+### Type safety
+
+- `GRADIENT_LEVEL` explicit lookup table replaces implicit `cg(+color[1]-1)` naming dependency.
+- `colorCell` gradient level cases unified via single `cg(GRADIENT_LEVEL[color])` path.
+- `apply()` now requires explicit `clearMode` parameter (removed unused default).
 
 ### Removed
 
-- Removed `/hrl` command (`ctx.ui.reload()` API no longer available in current Pi version).
+- `/hrl` command (`ctx.ui.reload()` API no longer available in current Pi version).
+- Dead `skipDisabledCheck` option and `opts` parameter from `updateState()`.
+- `padRight` unnecessary nullish coalescing on guaranteed non-null `logoLines[i]`.
 
 ### Changed
 
-- Architecture: consolidated 11 module-level mutable variables into a single typed `CCHeaderState` object with `DEFAULT_STATE` as the sole source of truth.
-- Merged `modifyConfig` and `directApply` into a single `updateState` function, eliminating ~30 lines of duplicated IO and re-mount logic.
-- `/hsp` animation speed now takes effect immediately (replaced `setInterval` with recursive `setTimeout` that reads current interval on each tick).
-- Frame recomputation now guarded by a dirty flag — recalculated only when logo color, gradient, or stripe settings change; slogan and speed changes skip the recompute.
-- Gradient level lookup now uses an explicit `GRADIENT_LEVEL` map instead of depending on the implicit naming convention `cg(+color[1]-1)`.
-- Duplicate `visibleWidth(slogan)` evaluation eliminated in render path.
-
-### Fixed
-
-- Fixed `/hdf` reset not persisting across sessions — `configStartupEnabled` now writes all settings atomically.
-- Fixed `/htg` toggle having no effect — disable branch now writes `quietStartup` and `clearOnStart` to the same settings snapshot before saving.
+- `/hv` no longer replays logo animation — both cycle and explicit modes now hot-swap the info label without restarting the timer.
+- `/hv` notification text unified: `Version label color: OFF` / `Pi only` / `Pi+ver` (was `Version color: OFF` / `Pi only` / `Pi+ver`).
+- `/hc` no-args now shows full color key table (`c=clawd a=anthropic …`) instead of key-only list.
+- `/htg` disable notification now reads `pi-cc-header: DISABLED. Takes effect next session. Config saved, /htg to re-enable.`
+- Comment tags converted from numbered `#N` markers to descriptive prefixes (`perf:`, `dedup:`, `design:`, `safety:`, `tech-debt:`, `sync:`, `consistency:`).
 
 ## v0.10.0 (2026-07-30)
 
@@ -341,6 +363,52 @@ All notable changes to pi-cc-header.
 ---
 
 ## 中文
+
+## v0.11.0 (2026-07-30)
+
+### 架构
+
+- 11 个模块级可变变量收敛为单一 `CCHeaderState` 类型对象，`DEFAULT_STATE` 作为唯一真源。
+- `modifyConfig` 与 `directApply` 合并为 `updateState()` —— 统一状态更新管线，内建脏标记守卫、帧重算与禁用状态检查。
+- 提取 `reapply()` 辅助函数 —— 统一持久化 + 头部重新挂载序列，覆盖全部 9 个命令。
+- 新增 `SettingsFile` 接口定义 settings.json 结构（`ccHeader`、`quietStartup`、`clearOnStart`、`packages`）。
+- 新增 `pick<T>()` 工具函数 —— 消除 `stateFromConfig` 中 9 行重复的类型守卫 + 默认值模式。
+
+### 性能
+
+- 渲染热路径：信息面板按终端宽度缓存（`cachedInfoRows` + `cachedInfoWidth`）—— 动画 15 帧中 14 帧跳过 `padRight`/`truncateToWidth`/`visibleWidth` 重复计算。
+- 帧计算热路径：11 个坐标字符串预解析为 `Set<string>` / `[number, number][]` 常量，消除运行时 `split` / `map` / `Number` 调用。
+- 脏标记守卫（`framesDirty`）：帧重算仅当颜色、渐变或横线设置变化时触发 —— slogan 与速度变更完全跳过重算。
+- 去重缓存命中路径中多余的 `infoMaxWidth` 计算。
+
+### Bug 修复
+
+- 修复 `/hs` 错误提示显示字面量 `${MAX_SLOGAN_LENGTH}` 而非 `85`（单引号 → 反引号模板字符串）。
+- 修复 `/hv <all|pi|off>` 缺少禁用状态守卫 —— 禁用状态下现在正确返回"Command unavailable"。
+- 修复 `/hdf` 重置后保留旧统计数据 —— 新增 `invalidateStats()` 调用。
+- 修复 `readSettings` JSON 解析失败静默丢数据 —— 现重命名损坏文件为 `.bak.json` 后再写入新默认值，防止配置永久丢失。
+- 修复 `stateFromConfig` 速度校验漏洞 —— `logoInterval` 现限定在 `SPEEDS` 数组内，拒绝手动编辑 settings.json 注入的任意速度值。
+- 修复 `/reload` 在 pi-cc-header 启用时导致输入区出现多余空行。
+
+### 类型安全
+
+- `GRADIENT_LEVEL` 显式映射表替代隐式 `cg(+color[1]-1)` 命名依赖。
+- `colorCell` 渐变层级 case 统一为单条 `cg(GRADIENT_LEVEL[color])` 路径。
+- `apply()` 现要求显式传入 `clearMode` 参数（删除未使用的默认值）。
+
+### 变更
+
+- `/hv` 不再重播 logo 动画——循环和显式模式均改为热替换信息标签，不重启计时器。
+- `/hv` 通知文案统一：`Version label color: OFF` / `Pi only` / `Pi+ver`（原为 `Version color: OFF` / `Pi only` / `Pi+ver`）。
+- `/hc` 无参数时显示完整颜色键表（`c=clawd a=anthropic …`），替换原先仅列出键名。
+- `/htg` 禁用提示改为 `pi-cc-header: DISABLED. Takes effect next session. Config saved, /htg to re-enable.`。
+- 注释标签从数字编号 `#N` 改为描述性前缀（`perf:`、`dedup:`、`design:`、`safety:`、`tech-debt:`、`sync:`、`consistency:`）。
+
+### 移除
+
+- `/hrl` 命令（`ctx.ui.reload()` API 在当前 Pi 版本中不可用）。
+- `updateState()` 中的死代码：`skipDisabledCheck` 选项及 `opts` 参数。
+- `padRight` 中冗余的空值合并（`logoLines[i]` 恒非空）。
 
 ## v0.10.0 (2026-07-30)
 

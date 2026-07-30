@@ -31,8 +31,8 @@ Takes effect on your **next session (window, same below)** or **`/reload`**.
 
 | Command | Description | Takes effect |
 | --- | --- | --- |
-| `/hc c/a/r/o/y/g/w/b/p` | Set logo color: c=clawd a=anthropic r=red o=orange y=yellow g=green w=white b=blue p=purple | Immediate |
-| `/hv` | Cycle version color: OFF → Pi only → Pi+ver | Immediate |
+| `/hc c/a/r/o/y/g/w/b/p` / `/hc` | Set logo color or show current with color key table | Immediate |
+| `/hv` / `/hv <all\|pi\|off>` | Cycle or set version label color | Immediate |
 | `/hi` | Toggle IBM-style on/off | Immediate |
 | `/hm` | Toggle Minecraft-style on/off | Immediate |
 | `/hps` | Toggle pkg skills visibility (`6 skills` / `6/7 skills`) | Immediate |
@@ -84,8 +84,8 @@ pi install npm:pi-cc-header
 
 | 命令 | 说明 | 生效方式 |
 | --- | --- | --- |
-| `/hc c/a/r/o/y/g/w/b/p` | 设置 logo 颜色：c=clawd 螃蟹红 a=anthropic 品牌橙 r=red 红 o=orange 橙 y=yellow 黄 g=green 绿 w=white 白 b=blue 蓝 p=purple 紫 | 即时生效 |
-| `/hv` | 切换版本号颜色模式 | 即时生效 |
+| `/hc c/a/r/o/y/g/w/b/p` / `/hc` | 设置 logo 颜色或显示当前颜色及色键表 | 即时生效 |
+| `/hv` / `/hv <all\|pi\|off>` | 循环或设定版本号颜色模式 | 即时生效 |
 | `/hi` | 开关 IBM 横线 | 即时生效 |
 | `/hm` | 开关 Minecraft 风格 | 即时生效 |
 | `/hps` | 切换随包 skills 可见性(`6 skills` / `6/7 skills`) | 即时生效 |
