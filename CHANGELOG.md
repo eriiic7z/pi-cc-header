@@ -4,6 +4,12 @@
 
 All notable changes to pi-cc-header.
 
+## v0.11.1 (2026-07-30)
+
+### Fixed
+
+- Fixed `/htg enable` regression: resource list now suppressed on next session after re-enabling pi-cc-header. The `configStartupEnabled` call was lost during the v0.11.0 state refactor.
+
 ## v0.11.0 (2026-07-30)
 
 ### Architecture
@@ -363,6 +369,12 @@ All notable changes to pi-cc-header.
 ---
 
 ## 中文
+
+## v0.11.1 (2026-07-30)
+
+### 修复
+
+- 修复 `/htg enable` 回归：重新启用 pi-cc-header 后，下次会话启动资源清单不再显示。v0.11.0 状态重构中丢掉了 `configStartupEnabled` 调用。
 
 ## v0.11.0 (2026-07-30)
 

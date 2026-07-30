@@ -812,6 +812,7 @@ export default function (pi: ExtensionAPI) {
 				h.disabled = false;
 				s.ccHeader = h;
 				invalidateStats();
+				configStartupEnabled(s);
 				reapply(pi, ctx, s, "pi-cc-header: ENABLED");
 			} else {
 				state.disabled = true;
