@@ -811,12 +811,14 @@ export default function (pi: ExtensionAPI) {
 		invalidateStats();
 		framesDirty = true;
 		recomputeFrames();
-		// Skip animation on reload, resume, and pi -r/--resume to avoid screen flickering
+		// Skip animation on reload, resume, and pi -r/--resume/--session to avoid screen flickering
 		const skipAnimation =
 			event.reason === "reload" ||
 			isResuming ||
 			(event.reason === "startup" &&
-				(process.argv.includes("-r") || process.argv.includes("--resume")));
+				(process.argv.includes("-r") ||
+					process.argv.includes("--resume") ||
+					process.argv.includes("--session")));
 		if (isResuming) isResuming = false;
 		// setTimeout(0): 延迟到 TUI 管道就绪后再挂载 header，避免与其他初始化竞态
 		setTimeout(() => apply(pi, ctx, "none", skipAnimation), 0);
