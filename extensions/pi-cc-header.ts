@@ -509,23 +509,28 @@ class PiHeader implements Component {
 		private readonly pi: ExtensionAPI,
 		private readonly ctx: ExtensionContext,
 		private readonly tui: TUI,
+		skipAnimation: boolean = false,
 	) {
 		cachedStats ??= computeStats(ctx);
 		this.stats = cachedStats!;
 
-		const tick = () => {
-			if (this.frame < LAST_FRAME_INDEX) {
-				this.frame++;
-				this.tui.requestRender();
-				// 递归 setTimeout：每次动态读取 state.logoInterval，/hsp 热生效
-				this.timer = setTimeout(tick, state.logoInterval);
-			} else {
-				this.timer = null;
-				this.tui.requestRender();
-			}
-		};
-		this.timer = setTimeout(tick, state.logoInterval);
-		this.timer.unref?.();
+		if (skipAnimation) {
+			this.frame = LAST_FRAME_INDEX;
+		} else {
+			const tick = () => {
+				if (this.frame < LAST_FRAME_INDEX) {
+					this.frame++;
+					this.tui.requestRender();
+					// 递归 setTimeout：每次动态读取 state.logoInterval，/hsp 热生效
+					this.timer = setTimeout(tick, state.logoInterval);
+				} else {
+					this.timer = null;
+					this.tui.requestRender();
+				}
+			};
+			this.timer = setTimeout(tick, state.logoInterval);
+			this.timer.unref?.();
+		}
 	}
 
 	render(width: number): string[] {
@@ -607,11 +612,13 @@ class PiHeader implements Component {
 
 /* ── 挂载 ── */
 let active: PiHeader | undefined;
+let isResuming = false;
 
 function apply(
 	pi: ExtensionAPI,
 	ctx: ExtensionContext,
 	clearMode: "full" | "viewport" | "none",
+	skipAnimation: boolean = false,
 ) {
 	if (ctx.mode !== "tui") return;
 	if (clearMode === "full") {
@@ -621,7 +628,7 @@ function apply(
 	}
 	ctx.ui.setHeader((tui) => {
 		active?.dispose();
-		active = new PiHeader(pi, ctx, tui);
+		active = new PiHeader(pi, ctx, tui, skipAnimation);
 		return active;
 	});
 }
@@ -788,7 +795,13 @@ export default function (pi: ExtensionAPI) {
 	// design: 复用 read→set ccHeader→save→dispose→apply→notify 序列
 	// （/htg /hv /hdf 等不走 updateState 的命令手动调 reapply，走 updateState 的命令在回调中传 reapply）
 
-	pi.on("session_start", (_event, ctx) => {
+	pi.on("session_before_switch", (event, _ctx) => {
+		if (event.reason === "resume") {
+			isResuming = true;
+		}
+	});
+
+	pi.on("session_start", (event, ctx) => {
 		const s = readSettings(settingsPath);
 		const h = s.ccHeader || {};
 		state = stateFromConfig(h);
@@ -798,8 +811,15 @@ export default function (pi: ExtensionAPI) {
 		invalidateStats();
 		framesDirty = true;
 		recomputeFrames();
+		// Skip animation on reload, resume, and pi -r/--resume to avoid screen flickering
+		const skipAnimation =
+			event.reason === "reload" ||
+			isResuming ||
+			(event.reason === "startup" &&
+				(process.argv.includes("-r") || process.argv.includes("--resume")));
+		if (isResuming) isResuming = false;
 		// setTimeout(0): 延迟到 TUI 管道就绪后再挂载 header，避免与其他初始化竞态
-		setTimeout(() => apply(pi, ctx, "none"), 0);
+		setTimeout(() => apply(pi, ctx, "none", skipAnimation), 0);
 	});
 
 	pi.registerCommand("htg", {
