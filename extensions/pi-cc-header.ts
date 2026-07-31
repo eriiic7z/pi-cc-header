@@ -735,9 +735,12 @@ function updateState(
 	applyAndPersist(msg);
 }
 
-function readSettings(settingsPath: string): SettingsFile {
+function readSettings(settingsPath: string): SettingsFile | null {
 	try {
-		return JSON.parse(readFileSync(settingsPath, "utf-8"));
+		const content = readFileSync(settingsPath, "utf-8");
+		const parsed = JSON.parse(content);
+		if (!parsed || typeof parsed !== "object") return null;
+		return parsed;
 	} catch {
 		// safety: 解析失败时备份原文件，防止后续写入覆盖用户数据
 		try {
@@ -747,7 +750,7 @@ function readSettings(settingsPath: string): SettingsFile {
 		} catch {
 			console.error("pi-cc-header: failed to read or back up settings.json");
 		}
-		return {};
+		return null;
 	}
 }
 
@@ -774,9 +777,10 @@ export default function (pi: ExtensionAPI) {
 	const reapply = (
 		pi: ExtensionAPI,
 		ctx: ExtensionContext,
-		s: SettingsFile,
+		s: SettingsFile | null,
 		msg: string,
 	) => {
+		if (!s) return;
 		s.ccHeader = stateToConfig();
 		saveSettings(s);
 		active?.dispose();
@@ -790,6 +794,7 @@ export default function (pi: ExtensionAPI) {
 
 	pi.on("session_start", (_event, ctx) => {
 		const s = readSettings(settingsPath);
+		if (!s) return; // parse failed, skip to avoid overwriting settings
 		const h = s.ccHeader || {};
 		state = stateFromConfig(h);
 		if (state.disabled) return;
@@ -806,6 +811,7 @@ export default function (pi: ExtensionAPI) {
 		description: "Toggle pi-cc-header ENABLED/DISABLED",
 		handler: async (_args, ctx) => {
 			const s = readSettings(settingsPath);
+			if (!s) return;
 			const h = s.ccHeader || {};
 			if (state.disabled) {
 				state.disabled = false;
@@ -902,8 +908,10 @@ export default function (pi: ExtensionAPI) {
 				state.versionColored = v === "all" ? 2 : v === "pi" ? 1 : 0;
 				{
 					const s = readSettings(settingsPath);
-					s.ccHeader = stateToConfig();
-					saveSettings(s);
+					if (s) {
+						s.ccHeader = stateToConfig();
+						saveSettings(s);
+					}
 				}
 				active?.reapply();
 				ctx.ui.notify(
@@ -924,8 +932,10 @@ export default function (pi: ExtensionAPI) {
 			state.versionColored = next;
 			{
 				const s = readSettings(settingsPath);
-				s.ccHeader = stateToConfig();
-				saveSettings(s);
+				if (s) {
+					s.ccHeader = stateToConfig();
+					saveSettings(s);
+				}
 			}
 			active?.reapply();
 			ctx.ui.notify(
@@ -957,12 +967,9 @@ export default function (pi: ExtensionAPI) {
 			framesDirty = true;
 			recomputeFrames();
 			invalidateStats();
-			reapply(
-				pi,
-				ctx,
-				readSettings(settingsPath),
-				"Reset to developer defaults",
-			);
+			const s = readSettings(settingsPath);
+			if (!s) return;
+			reapply(pi, ctx, s, "Reset to developer defaults");
 		},
 	});
 
@@ -1065,6 +1072,7 @@ export default function (pi: ExtensionAPI) {
 		description: "Clear all pi-cc-header config for clean uninstall",
 		handler: async (_args, ctx) => {
 			const s = readSettings(settingsPath);
+			if (!s) return;
 			delete s.ccHeader;
 			delete s.quietStartup;
 			delete s.clearOnStart;
