@@ -10,7 +10,7 @@ import {
 	writeFileSync,
 	readdirSync,
 	existsSync,
-	renameSync,
+	copyFileSync,
 } from "node:fs";
 import { join } from "node:path";
 
@@ -367,8 +367,8 @@ function computeStats(ctx: ExtensionContext) {
 
 	let settingsPackages: string[] = [];
 	try {
-		const s = JSON.parse(readFileSync(settingsPath, "utf-8"));
-		if (Array.isArray(s.packages)) settingsPackages = s.packages;
+		const s = readSettings(settingsPath);
+		if (s && Array.isArray(s.packages)) settingsPackages = s.packages;
 	} catch {
 		console.warn("pi-cc-header: failed to read settings.json");
 	}
@@ -739,16 +739,29 @@ function readSettings(settingsPath: string): SettingsFile | null {
 	try {
 		const content = readFileSync(settingsPath, "utf-8");
 		const parsed = JSON.parse(content);
-		if (!parsed || typeof parsed !== "object") return null;
+		if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+			return null;
 		return parsed;
 	} catch {
 		// safety: 解析失败时备份原文件，防止后续写入覆盖用户数据
 		try {
-			const bak = settingsPath.replace(/\.json$/, ".bak.json");
-			renameSync(settingsPath, bak);
-			console.error("pi-cc-header: corrupted settings.json backed up to", bak);
+			if (existsSync(settingsPath)) {
+				const ts = new Date().toISOString().replace(/[:.]/g, "-");
+				const bak = settingsPath.replace(/\.json$/, `.bak.${ts}.json`);
+				copyFileSync(settingsPath, bak);
+				console.error(
+					"pi-cc-header: corrupted settings.json backed up to",
+					bak,
+				);
+			}
 		} catch {
 			console.error("pi-cc-header: failed to read or back up settings.json");
+		}
+		// restore a minimal default so the file always exists and the extension can recover
+		try {
+			writeFileSync(settingsPath, "{\n}\n", "utf-8");
+		} catch {
+			console.error("pi-cc-header: failed to restore default settings.json");
 		}
 		return null;
 	}
@@ -780,7 +793,13 @@ export default function (pi: ExtensionAPI) {
 		s: SettingsFile | null,
 		msg: string,
 	) => {
-		if (!s) return;
+		if (!s) {
+			ctx.ui.notify(
+				"pi-cc-header: settings.json is corrupted or unreadable. A backup has been created.",
+				"error",
+			);
+			return;
+		}
 		s.ccHeader = stateToConfig();
 		saveSettings(s);
 		active?.dispose();
@@ -794,7 +813,13 @@ export default function (pi: ExtensionAPI) {
 
 	pi.on("session_start", (_event, ctx) => {
 		const s = readSettings(settingsPath);
-		if (!s) return; // parse failed, skip to avoid overwriting settings
+		if (!s) {
+			ctx.ui.notify(
+				"pi-cc-header: settings.json is corrupted or unreadable. A backup has been created and a fresh default restored.",
+				"error",
+			);
+			return;
+		}
 		const h = s.ccHeader || {};
 		state = stateFromConfig(h);
 		if (state.disabled) return;
@@ -811,7 +836,13 @@ export default function (pi: ExtensionAPI) {
 		description: "Toggle pi-cc-header ENABLED/DISABLED",
 		handler: async (_args, ctx) => {
 			const s = readSettings(settingsPath);
-			if (!s) return;
+			if (!s) {
+				ctx.ui.notify(
+					"pi-cc-header: settings.json is corrupted or unreadable. A backup has been created.",
+					"error",
+				);
+				return;
+			}
 			const h = s.ccHeader || {};
 			if (state.disabled) {
 				state.disabled = false;
@@ -908,10 +939,15 @@ export default function (pi: ExtensionAPI) {
 				state.versionColored = v === "all" ? 2 : v === "pi" ? 1 : 0;
 				{
 					const s = readSettings(settingsPath);
-					if (s) {
-						s.ccHeader = stateToConfig();
-						saveSettings(s);
+					if (!s) {
+						ctx.ui.notify(
+							"pi-cc-header: settings.json is corrupted or unreadable. A backup has been created.",
+							"error",
+						);
+						return;
 					}
+					s.ccHeader = stateToConfig();
+					saveSettings(s);
 				}
 				active?.reapply();
 				ctx.ui.notify(
@@ -932,10 +968,15 @@ export default function (pi: ExtensionAPI) {
 			state.versionColored = next;
 			{
 				const s = readSettings(settingsPath);
-				if (s) {
-					s.ccHeader = stateToConfig();
-					saveSettings(s);
+				if (!s) {
+					ctx.ui.notify(
+						"pi-cc-header: settings.json is corrupted or unreadable. A backup has been created.",
+						"error",
+					);
+					return;
 				}
+				s.ccHeader = stateToConfig();
+				saveSettings(s);
 			}
 			active?.reapply();
 			ctx.ui.notify(
@@ -968,7 +1009,13 @@ export default function (pi: ExtensionAPI) {
 			recomputeFrames();
 			invalidateStats();
 			const s = readSettings(settingsPath);
-			if (!s) return;
+			if (!s) {
+				ctx.ui.notify(
+					"pi-cc-header: settings.json is corrupted or unreadable. A backup has been created.",
+					"error",
+				);
+				return;
+			}
 			reapply(pi, ctx, s, "Reset to developer defaults");
 		},
 	});
@@ -1072,7 +1119,13 @@ export default function (pi: ExtensionAPI) {
 		description: "Clear all pi-cc-header config for clean uninstall",
 		handler: async (_args, ctx) => {
 			const s = readSettings(settingsPath);
-			if (!s) return;
+			if (!s) {
+				ctx.ui.notify(
+					"pi-cc-header: settings.json is corrupted or unreadable. A backup has been created.",
+					"error",
+				);
+				return;
+			}
 			delete s.ccHeader;
 			delete s.quietStartup;
 			delete s.clearOnStart;
