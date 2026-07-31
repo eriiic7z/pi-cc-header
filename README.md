@@ -2,7 +2,7 @@
 
 [中文](#中文)
 
-Claude Code–style startup header for [Pi](https://pi.dev) — pixel-animated Pi logo with a 9-color palette, toggleable IBM stripes and Minecraft gradient themes, paired with a configurable info bar displaying version, model, resource stats, AGENTS.md marker, cwd, and a customizable slogan.
+Claude Code–style startup header for [Pi](https://pi.dev) — animated Pi logo with a 9-color palette, toggleable IBM stripes and Minecraft themes; configurable info bar displays version, model, resource stats, AGENTS.md marker, cwd, and a customizable slogan.
 
 ![pi-cc-header](https://raw.githubusercontent.com/eriiic7z/pi-cc-header/main/assets/screenshot.png)
 
@@ -51,11 +51,13 @@ Takes effect on your **next session (window, same below)** or **`/reload`**. Ple
 
 Logo animation adapted from [pi.dev/install.sh](https://pi.dev/install.sh).
 
+Thanks to [@hacxy](https://github.com/hacxy) — 💻 Fixed logo animation flicker & settings.json data loss protection.
+
 ---
 
 ## 中文
 
-Claude Code 风格的 [Pi](https://pi.dev) 启动头部 — 像素动画 Pi logo，九色调色板，可开关的 IBM 横线和 Minecraft 渐变主题，搭配可配置信息栏，展示版本信息、模型信息、资源统计、AGENTS.md 标记、路径信息，以及可定制标语。
+Claude Code 风格的 [Pi](https://pi.dev) 启动头部 — 像素动画 Pi logo，九色调色板，可开关的 IBM 横线和 Minecraft 主题，搭配可配置信息栏，展示版本信息、模型信息、资源统计、AGENTS.md 标记、路径信息，以及可定制标语。
 
 ![pi-cc-header](https://raw.githubusercontent.com/eriiic7z/pi-cc-header/main/assets/screenshot.png)
 
@@ -103,3 +105,5 @@ pi install npm:pi-cc-header
 ## 致谢
 
 Logo 动画取自 [pi.dev/install.sh](https://pi.dev/install.sh)。
+
+感谢 [@hacxy](https://github.com/hacxy) — 💻 修复 logo 动画闪烁 & settings.json 数据丢失保护。

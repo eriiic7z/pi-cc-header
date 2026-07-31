@@ -4,6 +4,24 @@
 
 All notable changes to pi-cc-header.
 
+## v1.0.1 (2026-07-31)
+
+### Fixed
+
+- Fixed logo animation replaying on reload / resume / `pi -r` / `pi --session`, causing screen flickering. ([@hacxy](https://github.com/hacxy), [#2](https://github.com/eriiic7z/pi-cc-header/pull/2))
+- Fixed settings.json data loss on parse failure: `readSettings` now returns `null` to block the write chain; added `copyFileSync` + timestamped backup and self-healing default restore. ([@hacxy](https://github.com/hacxy), [#4](https://github.com/eriiic7z/pi-cc-header/pull/4))
+- Fixed missing slogan length validation in `stateFromConfig`: edits to settings.json exceeding the limit now fall back to the default.
+
+### Changed
+
+- Merged `/hv` command into the `updateState` pipeline, removing duplicated code.
+- Updated `description`.
+- Added contributor credit for @hacxy in README.
+
+### Development
+
+- Exported 5 pure functions and added 23 unit tests (`npm test`).
+
 ## v1.0.0 (2026-07-30)
 
 ### Added
@@ -380,6 +398,24 @@ All notable changes to pi-cc-header.
 ---
 
 ## 中文
+
+## v1.0.1 (2026-07-31)
+
+### 修复
+
+- 修复 reload / resume / `pi -r` / `pi --session` 时 logo 动画重播导致屏幕闪烁。([@hacxy](https://github.com/hacxy), [#2](https://github.com/eriiic7z/pi-cc-header/pull/2))
+- 修复 settings.json 解析失败时数据丢失问题：`readSettings` 返回 `null` 阻断写入链，增加 `copyFileSync` + 时间戳备份与自愈默认恢复。([@hacxy](https://github.com/hacxy), [#4](https://github.com/eriiic7z/pi-cc-header/pull/4))
+- 修复 `stateFromConfig` slogan 无长度校验：手动编辑 settings.json 写入超长 slogan 时自动回退到默认值。
+
+### 变更
+
+- `/hv` 命令合并到 `updateState` 管线，删除重复代码。
+- `description` 换新。
+- README 致谢备注 @hacxy 。
+
+### 开发
+
+- 导出 5 个纯函数，新建 23 个单元测试用例（`npm test`）。
 
 ## v1.0.0 (2026-07-30)
 

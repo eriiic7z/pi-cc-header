@@ -41,7 +41,7 @@ const SPEEDS = [25, 50, 75, 100] as const;
 const LOGO_COLS = 8;
 const LOGO_ROWS = 7;
 const LOGO_PIXEL_WIDTH = 14; // 8×2 双宽字符，含左右 margin
-const MAX_SLOGAN_LENGTH = 85;
+export const MAX_SLOGAN_LENGTH = 85;
 // sync: COLOR_NAMES 与 CMAP/GMAP 共享同一组颜色键，新增颜色需同步三处。
 const COLOR_NAMES: Record<string, string> = {
 	a: "anthropic",
@@ -197,7 +197,7 @@ const LOGO_FRAMES: LogoFrame[] = [
 ];
 const LAST_FRAME_INDEX = LOGO_FRAMES.length - 1;
 
-const colorCell = (color: LogoColor): string => {
+export const colorCell = (color: LogoColor): string => {
 	const cg = (n: number) => GMAP[state.logoColorKey]?.[n] ?? "34";
 	switch (color) {
 		case "cyan":
@@ -268,7 +268,11 @@ const PIECE_RIGHT: [number, number][] = [
 	[2, 1],
 ];
 
-function logoCellColor(frame: LogoFrame, y: number, x: number): LogoColor {
+export function logoCellColor(
+	frame: LogoFrame,
+	y: number,
+	x: number,
+): LogoColor {
 	const key = `${y},${x}`;
 
 	if (frame.white) return WHITE_CELLS.has(key) ? "white" : "panel";
@@ -349,7 +353,7 @@ function recomputeFrames(): void {
 }
 
 /* ── 工具函数 ── */
-function formatCwd(cwd: string): string {
+export function formatCwd(cwd: string): string {
 	const home = process.env.HOME;
 	return home && cwd.startsWith(home) ? `~${cwd.slice(home.length)}` : cwd;
 }
@@ -635,13 +639,13 @@ function apply(
 
 /* ── 状态 ⇄ 配置序列化 ── */
 // dedup: pick 工具函数消除 9 行重复的类型守卫 + 默认值模式
-const pick = <T>(
+export const pick = <T>(
 	val: unknown,
 	guard: (v: unknown) => boolean,
 	fallback: T,
 ): T => (guard(val) ? (val as T) : fallback);
 
-function stateFromConfig(h: Record<string, any>): CCHeaderState {
+export function stateFromConfig(h: Record<string, any>): CCHeaderState {
 	return {
 		logoColorKey: pick(
 			h.color,
@@ -673,7 +677,11 @@ function stateFromConfig(h: Record<string, any>): CCHeaderState {
 			(v) => typeof v === "number" && (SPEEDS as readonly number[]).includes(v),
 			DEFAULT_STATE.logoInterval,
 		),
-		slogan: pick(h.slogan, (v) => typeof v === "string", DEFAULT_STATE.slogan),
+		slogan: pick(
+			h.slogan,
+			(v) => typeof v === "string" && v.length <= MAX_SLOGAN_LENGTH,
+			DEFAULT_STATE.slogan,
+		),
 		sloganOn: pick(
 			h.sloganOn,
 			(v) => typeof v === "boolean",
@@ -712,6 +720,7 @@ function updateState(
 	ctx: ExtensionContext,
 	applyAndPersist: (msg: string) => void,
 	updater: (s: CCHeaderState) => string | null,
+	skipFrames: boolean = false,
 ): void {
 	if (state.disabled) {
 		ctx.ui.notify(
@@ -730,7 +739,7 @@ function updateState(
 
 	// 脏标记：仅颜色/渐变/横线变化需要重算帧
 	if (
-		state.logoColorKey !== prevColor ||
+		(!skipFrames && state.logoColorKey !== prevColor) ||
 		state.gradientOn !== prevGrad ||
 		state.stripeEnabled !== prevStripe
 	) {
@@ -950,60 +959,25 @@ export default function (pi: ExtensionAPI) {
 					);
 					return;
 				}
-				// consistency: /hv <all|pi|off> 不走 updateState, 手动检查 disabled
-				if (state.disabled) {
-					ctx.ui.notify(
-						"Command unavailable: pi-cc-header disabled. Use /htg to enable.",
-						"info",
-					);
-					return;
-				}
-				state.versionColored = v === "all" ? 2 : v === "pi" ? 1 : 0;
-				{
-					const s = readSettings(settingsPath);
-					if (!s) {
-						ctx.ui.notify(
-							"pi-cc-header: settings.json is corrupted or unreadable. A backup has been created.",
-							"error",
-						);
-						return;
-					}
-					s.ccHeader = stateToConfig();
-					saveSettings(s);
-				}
-				active?.reapply();
-				ctx.ui.notify(
-					`Version label color: ${["OFF", "Pi only", "Pi+ver"][state.versionColored]}`,
-					"info",
+				updateState(
+					ctx,
+					(msg) => reapply(pi, ctx, readSettings(settingsPath), msg),
+					(s) => {
+						s.versionColored = v === "all" ? 2 : v === "pi" ? 1 : 0;
+						return `Version label color: ${["OFF", "Pi only", "Pi+ver"][s.versionColored]}`;
+					},
+					true, // skipFrames: /hv 不改颜色，不需重算帧
 				);
 				return;
 			}
-			// /hv 不触发动画：直接改 state + reapply，不经过 updateState（不走 framesDirty / recomputeFrames）
-			if (state.disabled) {
-				ctx.ui.notify(
-					"Command unavailable: pi-cc-header disabled. Use /htg to enable.",
-					"info",
-				);
-				return;
-			}
-			const next = (state.versionColored + 1) % 3;
-			state.versionColored = next;
-			{
-				const s = readSettings(settingsPath);
-				if (!s) {
-					ctx.ui.notify(
-						"pi-cc-header: settings.json is corrupted or unreadable. A backup has been created.",
-						"error",
-					);
-					return;
-				}
-				s.ccHeader = stateToConfig();
-				saveSettings(s);
-			}
-			active?.reapply();
-			ctx.ui.notify(
-				`Version label color: ${["OFF", "Pi only", "Pi+ver"][next]}`,
-				"info",
+			updateState(
+				ctx,
+				(msg) => reapply(pi, ctx, readSettings(settingsPath), msg),
+				(s) => {
+					s.versionColored = (s.versionColored + 1) % 3;
+					return `Version label color: ${["OFF", "Pi only", "Pi+ver"][s.versionColored]}`;
+				},
+				true, // skipFrames: /hv 不改颜色，不需重算帧
 			);
 			return;
 		},
