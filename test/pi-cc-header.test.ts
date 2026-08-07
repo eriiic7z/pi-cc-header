@@ -1,5 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import {
 	pick,
 	stateFromConfig,
@@ -146,12 +148,12 @@ describe("logoCellColor", () => {
 
 // ── formatCwd ──
 describe("formatCwd", () => {
-	const home = process.env.HOME;
+	const home = homedir();
 
 	if (home) {
 		it("abbreviates home directory", () => {
-			const result = formatCwd(home + "/projects/test");
-			assert.equal(result, "~/projects/test");
+			const cwd = join(home, "projects", "test");
+			assert.equal(formatCwd(cwd), `~${cwd.slice(home.length)}`);
 		});
 	}
 

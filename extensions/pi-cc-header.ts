@@ -13,6 +13,7 @@ import {
 	copyFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import { homedir } from "node:os";
 
 /* ── 类型 ── */
 interface SettingsFile {
@@ -354,7 +355,7 @@ function recomputeFrames(): void {
 
 /* ── 工具函数 ── */
 export function formatCwd(cwd: string): string {
-	const home = process.env.HOME;
+	const home = homedir();
 	return home && cwd.startsWith(home) ? `~${cwd.slice(home.length)}` : cwd;
 }
 
@@ -365,7 +366,7 @@ function padRight(text: string, width: number): string {
 
 /* ── 各项统计（tech-debt: 同步遍历 ~/.pi/agent/npm/node_modules，包多时可能卡顿。cachedStats 保证每会话仅运行一次，后续可考虑 setImmediate 分片或 worker）── */
 function computeStats(ctx: ExtensionContext) {
-	const home = process.env.HOME ?? "";
+	const home = homedir();
 	const root = join(home, ".pi", "agent", "npm", "node_modules");
 	const settingsPath = join(home, ".pi", "agent", "settings.json");
 
@@ -785,12 +786,7 @@ function readSettings(settingsPath: string): SettingsFile | null {
 
 /* ── 入口 ── */
 export default function (pi: ExtensionAPI) {
-	const settingsPath = join(
-		process.env.HOME ?? "",
-		".pi",
-		"agent",
-		"settings.json",
-	);
+	const settingsPath = join(homedir(), ".pi", "agent", "settings.json");
 
 	const saveSettings = (s: SettingsFile) => {
 		writeFileSync(settingsPath, JSON.stringify(s, null, 2) + "\n", "utf-8");
