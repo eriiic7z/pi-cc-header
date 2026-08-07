@@ -4,6 +4,12 @@
 
 All notable changes to pi-cc-header.
 
+## v1.0.2 (2026-08-07)
+
+### Fixed
+
+- Fixed config path resolution on Windows: replaced `process.env.HOME` with `os.homedir()` for cross-platform compatibility. ([@mediocrebaby](https://github.com/mediocrebaby), [#5](https://github.com/eriiic7z/pi-cc-header/pull/5))
+
 ## v1.0.1 (2026-07-31)
 
 ### Fixed
@@ -398,6 +404,12 @@ All notable changes to pi-cc-header.
 ---
 
 ## 中文
+
+## v1.0.2 (2026-08-07)
+
+### 修复
+
+- 修复 Windows 上配置路径解析问题：将 `process.env.HOME` 替换为 `os.homedir()` 以实现跨平台兼容。([@mediocrebaby](https://github.com/mediocrebaby), [#5](https://github.com/eriiic7z/pi-cc-header/pull/5))
 
 ## v1.0.1 (2026-07-31)
 

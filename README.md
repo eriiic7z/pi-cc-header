@@ -12,7 +12,7 @@ Claude Code–style startup header for [Pi](https://pi.dev) — animated Pi logo
 pi install npm:pi-cc-header
 ```
 
-Takes effect on your **next session (window, same below)** or **`/reload`**. Please read this document in full, especially the **"Reset, disable & uninstall"** section, to ensure proper use of this extension.
+Takes effect on your **next session (window, same below)** or **`/reload`**. Please read this document in full, especially the [Reset, disable & uninstall](#reset-disable-uninstall) section, to ensure proper use of this extension.
 
 ## Features
 
@@ -51,7 +51,9 @@ Takes effect on your **next session (window, same below)** or **`/reload`**. Ple
 
 Logo animation adapted from [pi.dev/install.sh](https://pi.dev/install.sh).
 
-Thanks to [@hacxy](https://github.com/hacxy) — 💻 Fixed logo animation flicker & settings.json data loss protection.
+Thanks to [@hacxy](https://github.com/hacxy) — Fixed logo animation flicker & settings.json data loss protection.
+
+Thanks to [@mediocrebaby](https://github.com/mediocrebaby) — Fixed config path resolution for Windows compatibility.
 
 ---
 
@@ -67,7 +69,7 @@ Claude Code 风格的 [Pi](https://pi.dev) 启动头部 — 像素动画 Pi logo
 pi install npm:pi-cc-header
 ```
 
-安装后在 **下一次会话（窗口，下同）** 或 **`/reload`** 生效。请务必完整阅读本文档，特别是**“重置、禁用与卸载”**的小节，以确保您正常使用本扩展。
+安装后在 **下一次会话（窗口，下同）** 或 **`/reload`** 生效。请务必完整阅读本文档，特别是[重置、禁用与卸载](#重置禁用与卸载)小节，以确保您正常使用本扩展。
 
 ## 功能
 
@@ -106,4 +108,6 @@ pi install npm:pi-cc-header
 
 Logo 动画取自 [pi.dev/install.sh](https://pi.dev/install.sh)。
 
-感谢 [@hacxy](https://github.com/hacxy) — 💻 修复 logo 动画闪烁 & settings.json 数据丢失保护。
+感谢 [@hacxy](https://github.com/hacxy) — 修复 logo 动画闪烁 & settings.json 数据丢失保护。
+
+感谢 [@mediocrebaby](https://github.com/mediocrebaby) — 修复 Windows 兼容性配置路径解析。
