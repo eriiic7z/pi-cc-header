@@ -1,5 +1,7 @@
 import {
+	CONFIG_DIR_NAME,
 	VERSION,
+	getAgentDir,
 	type ExtensionAPI,
 	type ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
@@ -11,8 +13,9 @@ import {
 	readdirSync,
 	existsSync,
 	copyFileSync,
+	mkdirSync,
 } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { homedir } from "node:os";
 
 /* ── 类型 ── */
@@ -364,11 +367,32 @@ function padRight(text: string, width: number): string {
 	return clipped + " ".repeat(Math.max(0, width - visibleWidth(clipped)));
 }
 
-/* ── 各项统计（tech-debt: 同步遍历 ~/.pi/agent/npm/node_modules，包多时可能卡顿。cachedStats 保证每会话仅运行一次，后续可考虑 setImmediate 分片或 worker）── */
+export function buildRuntimePaths(
+	agentDir: string,
+	cwd?: string,
+	configDirName: string = CONFIG_DIR_NAME,
+) {
+	return {
+		agentDir,
+		settingsPath: join(agentDir, "settings.json"),
+		npmRoot: join(agentDir, "npm", "node_modules"),
+		globalSkillsDir: join(agentDir, "skills"),
+		globalAgentsPath: join(agentDir, "AGENTS.md"),
+		projectSkillsDir: cwd ? join(cwd, configDirName, "skills") : undefined,
+		projectAgentsPath: cwd ? join(cwd, configDirName, "AGENTS.md") : undefined,
+	};
+}
+
+function getRuntimePaths(cwd?: string) {
+	return buildRuntimePaths(getAgentDir(), cwd);
+}
+
+/* ── 各项统计（tech-debt: 同步遍历 agentDir/npm/node_modules，包多时可能卡顿。cachedStats 保证每会话仅运行一次，后续可考虑 setImmediate 分片或 worker）── */
 function computeStats(ctx: ExtensionContext) {
 	const home = homedir();
-	const root = join(home, ".pi", "agent", "npm", "node_modules");
-	const settingsPath = join(home, ".pi", "agent", "settings.json");
+	const paths = getRuntimePaths(ctx.cwd);
+	const root = paths.npmRoot;
+	const settingsPath = paths.settingsPath;
 
 	let settingsPackages: string[] = [];
 	try {
@@ -461,9 +485,9 @@ function computeStats(ctx: ExtensionContext) {
 	for (const d of [
 		join(home, ".agents", "skills"),
 		join(ctx.cwd, ".agents", "skills"),
-		join(home, ".pi", "agent", "skills"),
-		join(ctx.cwd, ".pi", "skills"),
-	]) {
+		paths.globalSkillsDir,
+		paths.projectSkillsDir,
+	].filter((d): d is string => !!d)) {
 		if (!existsSync(d)) continue;
 		try {
 			for (const e of readdirSync(d, { withFileTypes: true })) {
@@ -474,10 +498,10 @@ function computeStats(ctx: ExtensionContext) {
 		}
 	}
 
-	const globalAgents = existsSync(join(home, ".pi", "agent", "AGENTS.md"));
+	const globalAgents = existsSync(paths.globalAgentsPath);
 	const projectAgents =
 		existsSync(join(ctx.cwd, "AGENTS.md")) ||
-		existsSync(join(ctx.cwd, ".pi", "AGENTS.md"));
+		(paths.projectAgentsPath != null && existsSync(paths.projectAgentsPath));
 
 	return {
 		extensions: { installed, residue },
@@ -753,6 +777,17 @@ function updateState(
 }
 
 function readSettings(settingsPath: string): SettingsFile | null {
+	if (!existsSync(settingsPath)) {
+		try {
+			mkdirSync(dirname(settingsPath), { recursive: true });
+			writeFileSync(settingsPath, "{\n}\n", "utf-8");
+			return {};
+		} catch {
+			console.error("pi-cc-header: failed to initialize settings.json");
+			return null;
+		}
+	}
+
 	try {
 		const content = readFileSync(settingsPath, "utf-8");
 		const parsed = JSON.parse(content);
@@ -776,6 +811,7 @@ function readSettings(settingsPath: string): SettingsFile | null {
 		}
 		// restore a minimal default so the file always exists and the extension can recover
 		try {
+			mkdirSync(dirname(settingsPath), { recursive: true });
 			writeFileSync(settingsPath, "{\n}\n", "utf-8");
 		} catch {
 			console.error("pi-cc-header: failed to restore default settings.json");
@@ -786,7 +822,7 @@ function readSettings(settingsPath: string): SettingsFile | null {
 
 /* ── 入口 ── */
 export default function (pi: ExtensionAPI) {
-	const settingsPath = join(homedir(), ".pi", "agent", "settings.json");
+	const settingsPath = getRuntimePaths().settingsPath;
 
 	const saveSettings = (s: SettingsFile) => {
 		writeFileSync(settingsPath, JSON.stringify(s, null, 2) + "\n", "utf-8");

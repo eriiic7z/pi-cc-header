@@ -8,6 +8,7 @@ import {
 	colorCell,
 	logoCellColor,
 	formatCwd,
+	buildRuntimePaths,
 	MAX_SLOGAN_LENGTH,
 } from "../extensions/pi-cc-header.ts";
 
@@ -143,6 +144,23 @@ describe("logoCellColor", () => {
 	it("returns flash for flash frame", () => {
 		const flashFrame = { ...stillFrame, flash: true, white: false };
 		assert.equal(logoCellColor(flashFrame, 6, 3), "flash");
+	});
+});
+
+// ── buildRuntimePaths ──
+describe("buildRuntimePaths", () => {
+	it("builds settings and resource paths from custom agentDir", () => {
+		const paths = buildRuntimePaths("/tmp/custom-agent");
+		assert.equal(paths.settingsPath, "/tmp/custom-agent/settings.json");
+		assert.equal(paths.npmRoot, "/tmp/custom-agent/npm/node_modules");
+		assert.equal(paths.globalSkillsDir, "/tmp/custom-agent/skills");
+		assert.equal(paths.globalAgentsPath, "/tmp/custom-agent/AGENTS.md");
+	});
+
+	it("builds project-local paths from configurable config dir name", () => {
+		const paths = buildRuntimePaths("/tmp/custom-agent", "/work/repo", ".config-pi");
+		assert.equal(paths.projectSkillsDir, "/work/repo/.config-pi/skills");
+		assert.equal(paths.projectAgentsPath, "/work/repo/.config-pi/AGENTS.md");
 	});
 });
 
