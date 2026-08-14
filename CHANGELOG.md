@@ -4,6 +4,12 @@
 
 All notable changes to pi-cc-header.
 
+## v1.0.3 (2026-08-13)
+
+### Fixed
+
+- Fixed config path resolution to follow Pi's runtime config directory: pi-cc-header now reads/writes `settings.json` via `getAgentDir()`, supporting custom agent dirs such as `~/.config/pi/agent` set through `PI_CODING_AGENT_DIR`. ([@ReStranger](https://github.com/ReStranger), [#6](https://github.com/eriiic7z/pi-cc-header/pull/6))
+
 ## v1.0.2 (2026-08-07)
 
 ### Fixed
@@ -404,6 +410,12 @@ All notable changes to pi-cc-header.
 ---
 
 ## 中文
+
+## v1.0.3 (2026-08-13)
+
+### 修复
+
+- 修复配置路径解析：现在通过 `getAgentDir()` 跟随 Pi 当前实际使用的配置目录，支持通过 `PI_CODING_AGENT_DIR` 设置的自定义 agent 目录（如 `~/.config/pi/agent`）。([@ReStranger](https://github.com/ReStranger), [#6](https://github.com/eriiic7z/pi-cc-header/pull/6))
 
 ## v1.0.2 (2026-08-07)
 

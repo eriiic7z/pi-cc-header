@@ -16,6 +16,8 @@ Takes effect on your **next session (window, same below)** or **`/reload`**. Ple
 
 This extension follows Pi's runtime config directory. If you use a custom agent dir such as `~/.config/pi/agent` via `PI_CODING_AGENT_DIR`, pi-cc-header reads and writes the active `settings.json` there instead of assuming `~/.pi/agent`.
 
+> Note: switching to a new config directory does **not** migrate your existing `/hc` etc. settings — reconfigure them in the new location, or copy your old `settings.json` over.
+
 ## Features
 
 - 14-frame Pi logo animation, adjustable speed (25/50/75/100 ms)
@@ -55,6 +57,8 @@ Logo animation adapted from [pi.dev/install.sh](https://pi.dev/install.sh).
 
 Thanks to [@hacxy](https://github.com/hacxy) — Fixed logo animation flicker & settings.json data loss protection.
 
+Thanks to [@ReStranger](https://github.com/ReStranger) — Fixed config path resolution to follow custom Pi config directories.
+
 Thanks to [@mediocrebaby](https://github.com/mediocrebaby) — Fixed config path resolution for Windows compatibility.
 
 ---
@@ -74,6 +78,8 @@ pi install npm:pi-cc-header
 安装后在 **下一次会话（窗口，下同）** 或 **`/reload`** 生效。请务必完整阅读本文档，特别是[重置、禁用与卸载](#重置禁用与卸载)小节，以确保您正常使用本扩展。
 
 本扩展会跟随 Pi 当前实际使用的配置目录。如果您通过 `PI_CODING_AGENT_DIR` 使用 `~/.config/pi/agent` 之类的自定义 agent 目录，pi-cc-header 会在该目录下读写当前生效的 `settings.json`，不会再假定路径一定是 `~/.pi/agent`。
+
+> 注意：切换到新的配置目录后，原有的 `/hc` 等自定义设置不会自动迁移，需要在新目录中重新设置，或手动复制旧的 `settings.json`。
 
 ## 功能
 
@@ -115,3 +121,5 @@ Logo 动画取自 [pi.dev/install.sh](https://pi.dev/install.sh)。
 感谢 [@hacxy](https://github.com/hacxy) — 修复 logo 动画闪烁 & settings.json 数据丢失保护。
 
 感谢 [@mediocrebaby](https://github.com/mediocrebaby) — 修复 Windows 兼容性配置路径解析。
+
+感谢 [@ReStranger](https://github.com/ReStranger) — 修复配置路径跟随自定义 Pi 配置目录。
