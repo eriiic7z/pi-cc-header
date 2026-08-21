@@ -19,8 +19,12 @@ import { dirname, join } from "node:path";
 import { homedir } from "node:os";
 
 /* ── 类型 ── */
+interface CCHeaderConfig extends Record<string, any> {
+	readOnlyConfig?: boolean;
+}
+
 interface SettingsFile {
-	ccHeader?: Record<string, any>;
+	ccHeader?: CCHeaderConfig;
 	quietStartup?: boolean;
 	clearOnStart?: boolean;
 	packages?: string[];
@@ -740,6 +744,30 @@ function stateToConfig(): Record<string, any> {
 	};
 }
 
+function getCCHeaderConfig(
+	settings: SettingsFile | null | undefined,
+): CCHeaderConfig {
+	const ccHeader = settings?.ccHeader;
+	return ccHeader && typeof ccHeader === "object" && !Array.isArray(ccHeader)
+		? ccHeader
+		: {};
+}
+
+export function configWritesEnabled(
+	settings: SettingsFile | null | undefined,
+): boolean {
+	return getCCHeaderConfig(settings).readOnlyConfig !== true;
+}
+
+type PersistResult = "saved" | "skipped" | "failed";
+
+function isReadonlyWriteError(error: unknown): boolean {
+	if (!error || typeof error !== "object" || !("code" in error)) return false;
+	return ["EROFS", "EACCES", "EPERM"].includes(
+		String((error as NodeJS.ErrnoException).code),
+	);
+}
+
 /* ── 统一配置更新（合并 modifyConfig + directApply）── */
 function updateState(
 	ctx: ExtensionContext,
@@ -776,46 +804,54 @@ function updateState(
 	applyAndPersist(msg);
 }
 
-function readSettings(settingsPath: string): SettingsFile | null {
-	if (!existsSync(settingsPath)) {
-		try {
-			mkdirSync(dirname(settingsPath), { recursive: true });
-			writeFileSync(settingsPath, "{\n}\n", "utf-8");
-			return {};
-		} catch {
-			console.error("pi-cc-header: failed to initialize settings.json");
-			return null;
+function emptySettings(): SettingsFile {
+	return {};
+}
+
+function parseSettingsFile(settingsPath: string): SettingsFile {
+	const content = readFileSync(settingsPath, "utf-8");
+	try {
+		const parsed = JSON.parse(content);
+		if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+			throw new Error("pi-cc-header: settings.json must contain an object");
 		}
+		return parsed;
+	} catch (error) {
+		throw new Error("pi-cc-header: invalid settings.json", { cause: error });
 	}
+}
+
+function backupCorruptedSettings(settingsPath: string): void {
+	try {
+		if (!existsSync(settingsPath)) return;
+		const ts = new Date().toISOString().replace(/[:.]/g, "-");
+		const bak = settingsPath.replace(/\.json$/, `.bak.${ts}.json`);
+		copyFileSync(settingsPath, bak);
+		console.error("pi-cc-header: corrupted settings.json backed up to", bak);
+	} catch {
+		console.error("pi-cc-header: failed to read or back up settings.json");
+	}
+}
+
+function restoreDefaultSettingsFile(settingsPath: string): void {
+	try {
+		mkdirSync(dirname(settingsPath), { recursive: true });
+		writeFileSync(settingsPath, "{\n}\n", "utf-8");
+	} catch {
+		console.error("pi-cc-header: failed to restore default settings.json");
+	}
+}
+
+function readSettings(settingsPath: string): SettingsFile | null {
+	if (!existsSync(settingsPath)) return emptySettings();
 
 	try {
-		const content = readFileSync(settingsPath, "utf-8");
-		const parsed = JSON.parse(content);
-		if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
-			return null;
-		return parsed;
+		return parseSettingsFile(settingsPath);
 	} catch {
 		// safety: 解析失败时备份原文件，防止后续写入覆盖用户数据
-		try {
-			if (existsSync(settingsPath)) {
-				const ts = new Date().toISOString().replace(/[:.]/g, "-");
-				const bak = settingsPath.replace(/\.json$/, `.bak.${ts}.json`);
-				copyFileSync(settingsPath, bak);
-				console.error(
-					"pi-cc-header: corrupted settings.json backed up to",
-					bak,
-				);
-			}
-		} catch {
-			console.error("pi-cc-header: failed to read or back up settings.json");
-		}
+		backupCorruptedSettings(settingsPath);
 		// restore a minimal default so the file always exists and the extension can recover
-		try {
-			mkdirSync(dirname(settingsPath), { recursive: true });
-			writeFileSync(settingsPath, "{\n}\n", "utf-8");
-		} catch {
-			console.error("pi-cc-header: failed to restore default settings.json");
-		}
+		restoreDefaultSettingsFile(settingsPath);
 		return null;
 	}
 }
@@ -824,14 +860,38 @@ function readSettings(settingsPath: string): SettingsFile | null {
 export default function (pi: ExtensionAPI) {
 	const settingsPath = getRuntimePaths().settingsPath;
 
-	const saveSettings = (s: SettingsFile) => {
-		writeFileSync(settingsPath, JSON.stringify(s, null, 2) + "\n", "utf-8");
+	const saveSettings = (s: SettingsFile): boolean => {
+		try {
+			mkdirSync(dirname(settingsPath), { recursive: true });
+			writeFileSync(settingsPath, `${JSON.stringify(s, null, 2)}\n`, "utf-8");
+			return true;
+		} catch (error) {
+			if (isReadonlyWriteError(error)) return false;
+			console.error("pi-cc-header: failed to write settings.json");
+			return false;
+		}
+	};
+
+	const withPersistenceNote = (
+		msg: string,
+		settings: SettingsFile,
+		persistResult: PersistResult,
+	) => {
+		if (persistResult === "saved") return msg;
+		if (persistResult === "skipped") {
+			return `${msg} (session only; ccHeader.readOnlyConfig=true)`;
+		}
+		return configWritesEnabled(settings)
+			? `${msg} (not saved: settings.json is not writable)`
+			: `${msg} (session only; ccHeader.readOnlyConfig=true)`;
 	};
 
 	const configStartupEnabled = (s: SettingsFile) => {
-		s.quietStartup = true;
-		s.clearOnStart = true;
-		saveSettings(s);
+		if (configWritesEnabled(s)) {
+			s.quietStartup = true;
+			s.clearOnStart = true;
+			saveSettings(s);
+		}
 		process.stdout.write("\x1b[2J\x1b[3J\x1b[H");
 	};
 
@@ -848,12 +908,15 @@ export default function (pi: ExtensionAPI) {
 			);
 			return;
 		}
-		s.ccHeader = stateToConfig();
-		saveSettings(s);
+		let persistResult: PersistResult = "skipped";
+		if (configWritesEnabled(s)) {
+			s.ccHeader = { ...getCCHeaderConfig(s), ...stateToConfig() };
+			persistResult = saveSettings(s) ? "saved" : "failed";
+		}
 		active?.dispose();
 		active = undefined;
 		apply(pi, ctx, "none");
-		ctx.ui.notify(msg, "info");
+		ctx.ui.notify(withPersistenceNote(msg, s, persistResult), "info");
 	};
 
 	// design: 复用 read→set ccHeader→save→dispose→apply→notify 序列
@@ -874,7 +937,7 @@ export default function (pi: ExtensionAPI) {
 			);
 			return;
 		}
-		const h = s.ccHeader || {};
+		const h = getCCHeaderConfig(s);
 		state = stateFromConfig(h);
 		if (state.disabled) return;
 		// design: /hrl 已移除（pi 当前版本 ctx.ui.reload() 不可用），启动时无条件抑制资源列表
@@ -906,28 +969,46 @@ export default function (pi: ExtensionAPI) {
 				);
 				return;
 			}
-			const h = s.ccHeader || {};
+			const h = getCCHeaderConfig(s);
 			if (state.disabled) {
 				state.disabled = false;
 				h.disabled = false;
 				s.ccHeader = h;
 				invalidateStats();
 				configStartupEnabled(s);
-				reapply(pi, ctx, s, "pi-cc-header: ENABLED");
+				reapply(
+					pi,
+					ctx,
+					s,
+					configWritesEnabled(s)
+						? "pi-cc-header: ENABLED"
+						: "pi-cc-header: ENABLED for this session only",
+				);
 			} else {
 				state.disabled = true;
 				h.disabled = true;
-				s.ccHeader = h;
-				s.quietStartup = false;
-				s.clearOnStart = false;
-				saveSettings(s);
 				active?.dispose();
 				active = undefined;
 				ctx.ui.setHeader(undefined);
-				ctx.ui.notify(
-					"pi-cc-header: DISABLED. Takes effect next session. Config saved, /htg to re-enable.",
-					"info",
-				);
+				if (configWritesEnabled(s)) {
+					s.ccHeader = h;
+					s.quietStartup = false;
+					s.clearOnStart = false;
+					const persisted = saveSettings(s);
+					ctx.ui.notify(
+						withPersistenceNote(
+							"pi-cc-header: DISABLED. Takes effect next session. /htg to re-enable.",
+							s,
+							persisted,
+						),
+						"info",
+					);
+				} else {
+					ctx.ui.notify(
+						"pi-cc-header: DISABLED for this session only. Config writes are disabled; /htg to re-enable.",
+						"info",
+					);
+				}
 			}
 		},
 	});
@@ -1154,16 +1235,25 @@ export default function (pi: ExtensionAPI) {
 				);
 				return;
 			}
+			if (!configWritesEnabled(s)) {
+				ctx.ui.notify(
+					"pi-cc-header: /hcl is unavailable when ccHeader.readOnlyConfig=true. Remove the config declaratively, then uninstall the package.",
+					"info",
+				);
+				return;
+			}
 			delete s.ccHeader;
 			delete s.quietStartup;
 			delete s.clearOnStart;
-			saveSettings(s);
+			const persisted = saveSettings(s);
 			state = { ...DEFAULT_STATE, disabled: true };
 			active?.dispose();
 			active = undefined;
 			ctx.ui.setHeader(undefined);
 			ctx.ui.notify(
-				"pi-cc-header Config: cleared. You can now uninstall the package.",
+				persisted
+					? "pi-cc-header Config: cleared. You can now uninstall the package."
+					: "pi-cc-header Config: cleared for this session only. Could not save settings.json.",
 				"info",
 			);
 		},

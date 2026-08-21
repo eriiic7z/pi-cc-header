@@ -10,6 +10,7 @@ import {
 	formatCwd,
 	buildRuntimePaths,
 	MAX_SLOGAN_LENGTH,
+	configWritesEnabled,
 } from "../extensions/pi-cc-header.ts";
 
 // ── pick ──
@@ -93,6 +94,26 @@ describe("stateFromConfig", () => {
 	});
 });
 
+describe("configWritesEnabled", () => {
+	it("returns false when readOnlyConfig is enabled", () => {
+		assert.equal(
+			configWritesEnabled({ ccHeader: { readOnlyConfig: true } }),
+			false,
+		);
+	});
+
+	it("ignores non-object ccHeader values", () => {
+		assert.equal(configWritesEnabled({ ccHeader: true as any }), true);
+		assert.equal(configWritesEnabled({ ccHeader: [] as any }), true);
+	});
+
+	it("returns true by default", () => {
+		assert.equal(configWritesEnabled({ ccHeader: {} }), true);
+		assert.equal(configWritesEnabled({}), true);
+		assert.equal(configWritesEnabled(null), true);
+	});
+});
+
 // ── colorCell ──
 describe("colorCell", () => {
 	it("renders cyan cell", () => {
@@ -158,7 +179,11 @@ describe("buildRuntimePaths", () => {
 	});
 
 	it("builds project-local paths from configurable config dir name", () => {
-		const paths = buildRuntimePaths("/tmp/custom-agent", "/work/repo", ".config-pi");
+		const paths = buildRuntimePaths(
+			"/tmp/custom-agent",
+			"/work/repo",
+			".config-pi",
+		);
 		assert.equal(paths.projectSkillsDir, "/work/repo/.config-pi/skills");
 		assert.equal(paths.projectAgentsPath, "/work/repo/.config-pi/AGENTS.md");
 	});

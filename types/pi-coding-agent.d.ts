@@ -3,12 +3,22 @@
 // pi-coding-agent ambient types
 declare module "@earendil-works/pi-coding-agent" {
 	export const VERSION: string;
+	export const CONFIG_DIR_NAME: string;
+	export function getAgentDir(): string;
+
+	type SessionReason = "startup" | "reload" | "resume" | string;
+	type SessionStartEvent = { reason: SessionReason };
+	type SessionBeforeSwitchEvent = { reason: SessionReason };
 
 	export interface ExtensionAPI {
 		getThinkingLevel(): string;
 		on(
 			event: "session_start",
-			handler: (event: unknown, ctx: ExtensionContext) => void,
+			handler: (event: SessionStartEvent, ctx: ExtensionContext) => void,
+		): void;
+		on(
+			event: "session_before_switch",
+			handler: (event: SessionBeforeSwitchEvent, ctx: ExtensionContext) => void,
 		): void;
 		registerCommand(
 			name: string,
