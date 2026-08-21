@@ -69,7 +69,7 @@ Logo animation adapted from [pi.dev/install.sh](https://pi.dev/install.sh).
 
 Thanks to [@hacxy](https://github.com/hacxy) — Fixed logo animation flicker & settings.json data loss protection.
 
-Thanks to [@ReStranger](https://github.com/ReStranger) — Fixed config path resolution to follow custom Pi config directories.
+Thanks to [@ReStranger](https://github.com/ReStranger) — Fixed config path resolution to follow custom Pi config directories; added read-only config mode (`ccHeader.readOnlyConfig`) for NixOS and read-only filesystems.
 
 Thanks to [@mediocrebaby](https://github.com/mediocrebaby) — Fixed config path resolution for Windows compatibility.
 
@@ -146,4 +146,4 @@ Logo 动画取自 [pi.dev/install.sh](https://pi.dev/install.sh)。
 
 感谢 [@mediocrebaby](https://github.com/mediocrebaby) — 修复 Windows 兼容性配置路径解析。
 
-感谢 [@ReStranger](https://github.com/ReStranger) — 修复配置路径跟随自定义 Pi 配置目录。
+感谢 [@ReStranger](https://github.com/ReStranger) — 修复配置路径跟随自定义 Pi 配置目录；新增只读配置模式（`ccHeader.readOnlyConfig`），支持 NixOS 及只读文件系统。

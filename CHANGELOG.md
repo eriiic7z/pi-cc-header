@@ -4,6 +4,12 @@
 
 All notable changes to pi-cc-header.
 
+## v1.1.0 (2026-08-21)
+
+### Added
+
+- Added read-only config mode for NixOS and similar systems: setting `ccHeader.readOnlyConfig: true` stops the extension from writing `settings.json`. Visual changes apply for the current session only; `/hcl` is unavailable until the flag is removed declaratively. This option also applies to other NixOS-like declaratively-managed configs on read-only filesystems. ([@ReStranger](https://github.com/ReStranger), [#8](https://github.com/eriiic7z/pi-cc-header/pull/8))
+
 ## v1.0.3 (2026-08-13)
 
 ### Fixed
@@ -410,6 +416,12 @@ All notable changes to pi-cc-header.
 ---
 
 ## 中文
+
+## v1.1.0 (2026-08-21)
+
+### 新增
+
+- 为 NixOS 等系统添加只读配置模式：设置 `ccHeader.readOnlyConfig: true` 后，扩展不再写入 `settings.json`。界面变更仅当前会话生效，`/hcl` 在声明式移除该字段前不可用。该项配置同样适用于类 NixOS 的其他声明式管理、只读文件系统。([@ReStranger](https://github.com/ReStranger), [#8](https://github.com/eriiic7z/pi-cc-header/pull/8))
 
 ## v1.0.3 (2026-08-13)
 
