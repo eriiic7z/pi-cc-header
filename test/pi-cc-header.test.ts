@@ -8,6 +8,12 @@ import {
 	stateFromConfig,
 	colorCell,
 	logoCellColor,
+	piLogoRgb,
+	piLogoCellColor,
+	gradientLevel,
+	shadesFromRgb,
+	accentOpenToRgb,
+	themeAccentShades,
 	formatCwd,
 	buildRuntimePaths,
 	MAX_SLOGAN_LENGTH,
@@ -94,6 +100,10 @@ describe("stateFromConfig", () => {
 		const s = stateFromConfig({ slogan: overlong });
 		assert.equal(s.slogan, "Code something that makes you proud");
 	});
+
+	it("color key pi: logo RGB + theme accent", () => {
+		assert.equal(stateFromConfig({ color: "pi" }).logoColorKey, "pi");
+	});
 });
 
 describe("configWritesEnabled", () => {
@@ -167,6 +177,153 @@ describe("logoCellColor", () => {
 	it("returns flash for flash frame", () => {
 		const flashFrame = { ...stillFrame, flash: true, white: false };
 		assert.equal(logoCellColor(flashFrame, 6, 3), "flash");
+	});
+});
+
+// ── piLogoRgb ──
+describe("piLogoRgb", () => {
+	it("maps Pi cells to animation colors", () => {
+		assert.equal(piLogoRgb(3, 2), "cyan");
+		assert.equal(piLogoRgb(4, 4), "cyan");
+		assert.equal(piLogoRgb(4, 2), "red");
+		assert.equal(piLogoRgb(6, 2), "red");
+		assert.equal(piLogoRgb(5, 5), "green");
+		assert.equal(piLogoRgb(6, 5), "green");
+	});
+
+	it("covers all 10 Pi cells, panel elsewhere", () => {
+		const piCells: [number, number][] = [
+			[3, 2],
+			[3, 3],
+			[3, 4],
+			[4, 2],
+			[4, 4],
+			[5, 2],
+			[5, 3],
+			[5, 5],
+			[6, 2],
+			[6, 5],
+		];
+		for (const [y, x] of piCells) assert.notEqual(piLogoRgb(y, x), "panel");
+		assert.equal(piLogoRgb(1, 1), "panel");
+	});
+});
+
+// ── shadesFromRgb ──
+describe("shadesFromRgb", () => {
+	it("keeps level 0 equal to the base color", () => {
+		assert.equal(shadesFromRgb([122, 170, 255])[0], "38;2;122;170;255");
+	});
+
+	it("darkens monotonically across 4 levels", () => {
+		const shades = shadesFromRgb([122, 170, 255]);
+		assert.equal(shades.length, 4);
+		const parse = (s: string) =>
+			s.match(/38;2;(\d+);(\d+);(\d+)/)!.slice(1).map(Number);
+		const levels = shades.map(parse);
+		for (let i = 1; i < levels.length; i++) {
+			for (let c = 0; c < 3; c++) {
+				assert.ok(
+					levels[i][c] <= levels[i - 1][c],
+					`${shades[i]} should not be brighter than ${shades[i - 1]}`,
+				);
+			}
+		}
+	});
+});
+
+// ── piLogoCellColor ──
+describe("piLogoCellColor", () => {
+	const parse = (s: string) => s.match(/38;2;(\d+);(\d+);(\d+)/)!.slice(1).map(Number);
+
+	it("uses the brand colors of the built-in Pi logo", () => {
+		assert.deepEqual(parse(piLogoCellColor(3, 2, false)), [228, 138, 122]);
+		assert.deepEqual(parse(piLogoCellColor(4, 2, false)), [79, 142, 179]);
+		assert.deepEqual(parse(piLogoCellColor(5, 5, false)), [234, 182, 93]);
+	});
+
+	it("keeps every brand color flat when the gradient is off", () => {
+		assert.equal(piLogoCellColor(3, 2, false), piLogoCellColor(4, 4, false));
+		assert.equal(
+			piLogoCellColor(4, 2, false),
+			piLogoCellColor(6, 2, false),
+		);
+		assert.equal(piLogoCellColor(5, 5, false), piLogoCellColor(6, 5, false));
+		assert.notEqual(
+			piLogoCellColor(3, 2, false),
+			piLogoCellColor(4, 2, false),
+		);
+	});
+
+	it("darkens the logo top-down when the gradient is on", () => {
+		const levels = [4, 5, 6].map((y) => parse(piLogoCellColor(y, 2, true)));
+		for (let i = 1; i < levels.length; i++) {
+			for (let c = 0; c < 3; c++) {
+				assert.ok(
+					levels[i][c] <= levels[i - 1][c],
+					"row gradient must not get brighter downwards",
+				);
+			}
+		}
+		assert.notDeepEqual(
+			parse(piLogoCellColor(3, 2, true)),
+			parse(piLogoCellColor(6, 2, true)),
+		);
+	});
+
+	it("returns blank space for a non-logo cell", () => {
+		assert.equal(piLogoCellColor(1, 1, true), "  ");
+	});
+});
+
+// ── gradientLevel ──
+describe("gradientLevel", () => {
+	it("maps rows to 4 shade levels", () => {
+		assert.equal(gradientLevel(1), 0);
+		assert.equal(gradientLevel(3), 0);
+		assert.equal(gradientLevel(4), 1);
+		assert.equal(gradientLevel(5), 2);
+		assert.equal(gradientLevel(6), 3);
+		assert.equal(gradientLevel(7), 3);
+	});
+});
+
+// ── accentOpenToRgb / themeAccentShades ──
+describe("themeAccentShades", () => {
+	it("parses truecolor open code", () => {
+		assert.deepEqual(accentOpenToRgb("\x1b[38;2;100;150;200m"), [100, 150, 200]);
+	});
+
+	it("rejects non-truecolor and garbage", () => {
+		assert.equal(accentOpenToRgb("\x1b[38;5;129m"), null);
+		assert.equal(accentOpenToRgb("\x1b[39m"), null);
+		assert.equal(accentOpenToRgb(""), null);
+		assert.equal(accentOpenToRgb("\x1b[38;2;999;0;0m"), null);
+	});
+
+	it("builds 4 shades from theme accent", () => {
+		const shades = themeAccentShades({
+			getFgAnsi: () => "\x1b[38;2;100;150;200m",
+		});
+		assert.ok(shades !== null && shades.length === 4);
+		assert.equal(shades[0], "38;2;100;150;200");
+		assert.equal(shades[3], "38;2;60;90;120");
+	});
+
+	it("falls back to null without truecolor accent", () => {
+		assert.equal(themeAccentShades({}), null);
+		assert.equal(
+			themeAccentShades({ getFgAnsi: () => "\x1b[38;5;129m" }),
+			null,
+		);
+		assert.equal(
+			themeAccentShades({
+				getFgAnsi: () => {
+					throw new Error("Unknown theme color");
+				},
+			}),
+			null,
+		);
 	});
 });
 

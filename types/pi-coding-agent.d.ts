@@ -37,7 +37,10 @@ declare module "@earendil-works/pi-coding-agent" {
 		mode: string | undefined;
 		model?: { id: string };
 		ui: {
-			theme: { fg(name: string, text: string): string };
+			theme: {
+				fg(name: string, text: string): string;
+				getFgAnsi?(name: string): string;
+			};
 			setHeader(
 				ctor?: (
 					tui: import("@earendil-works/pi-tui").TUI,

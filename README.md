@@ -34,6 +34,7 @@ With `ccHeader.readOnlyConfig=true`, the extension will not try to write `settin
 
 - 14-frame Pi logo animation, adjustable speed (25/50/75/100 ms)
 - 9-color palette: Anthropic brand orange, Clawd crab red, and more
+- `pi` color mode (`/hc pi`): logo is drawn in the brand colors of Pi's own small logo (coral / blue / yellow) instead of plain ANSI colors, accent (stripes, version, slogan) follows Pi theme accent — IBM stripes and Minecraft gradient apply (logo shades derived from the brand colors, stripe shades from the theme accent in truecolor)
 - IBM-style horizontal stripes
 - Minecraft-style pixel theme and 4-level 24-bit true-color gradient
 - Version number coloring
@@ -46,7 +47,7 @@ With `ccHeader.readOnlyConfig=true`, the extension will not try to write `settin
 
 | Command | Description | Takes effect |
 | --- | --- | --- |
-| `/hc c/a/r/o/y/g/w/b/p` / `/hc` | Set logo color or show current with color key table | Immediate |
+| `/hc c/a/r/o/y/g/w/b/p/pi` / `/hc` | Set logo color (`pi` = brand-colored logo + theme accent) or show current with color key table | Immediate |
 | `/hi` | Toggle IBM-style on/off | Immediate |
 | `/hm` | Toggle Minecraft-style on/off | Immediate |
 | `/hsp` <ms> / `/hsp` | Set / show animation speed (25/50/75/100) | Immediate |
@@ -109,6 +110,7 @@ pi install npm:pi-cc-header
 
 - 14 帧 Pi logo 动画，动画速度可调（25/50/75/100 ms）
 - 九色调色板：Anthropic 品牌橙、Clawd 螃蟹红等
+- `pi` 配色（`/hc pi`）：标志使用 Pi 自带小 logo 的品牌色（coral / blue / yellow）而非普通 ANSI 颜色，强调色（条纹、版本、标语）跟随 Pi 主题强调色，IBM 横线与 Minecraft 渐变生效（标志渐变由品牌色推导，条纹渐变在 truecolor 下由主题强调色推导）
 - IBM 风格水平横线
 - Minecraft 风格像素主题，4 级 24-bit 真彩色渐变
 - 版本号颜色设定
@@ -121,7 +123,7 @@ pi install npm:pi-cc-header
 
 | 命令 | 说明 | 生效方式 |
 | --- | --- | --- |
-| `/hc c/a/r/o/y/g/w/b/p` / `/hc` | 设置 logo 颜色或显示当前颜色及色键表 | 即时生效 |
+| `/hc c/a/r/o/y/g/w/b/p/pi` / `/hc` | 设置 logo 颜色（`pi` = 品牌色标志 + 主题强调色）或显示当前颜色及色键表 | 即时生效 |
 | `/hi` | 开关 IBM 横线 | 即时生效 |
 | `/hm` | 开关 Minecraft 风格 | 即时生效 |
 | `/hsp` <ms> / `/hsp` | 设置 / 显示动画速度（25/50/75/100） | 即时生效 |
