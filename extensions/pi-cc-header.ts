@@ -62,6 +62,7 @@ const COLOR_NAMES: Record<string, string> = {
 	w: "white",
 	b: "blue",
 	p: "purple",
+	pi: "accent",
 };
 const DEFAULT_STATE: CCHeaderState = {
 	logoColorKey: "c",
@@ -272,6 +273,75 @@ const PIECE_RIGHT: [number, number][] = [
 	[2, 1],
 ];
 
+export function piLogoRgb(y: number, x: number): LogoColor {
+	const k = `${y},${x}`;
+	if (P5_CYAN.has(k)) return "cyan";
+	if (P5_RED.has(k)) return "red";
+	if (P5_GREEN.has(k)) return "green";
+	return "panel";
+}
+
+const isStripeCell = (y: number, x: number): boolean =>
+	state.stripeEnabled && y >= 2 && y <= LOGO_ROWS && x <= 6;
+
+export const gradientLevel = (y: number): number => {
+	if (y <= 3) return 0;
+	if (y === 4) return 1;
+	if (y === 5) return 2;
+	return 3;
+};
+
+type Rgb = [number, number, number];
+const SHADE_FACTORS = [1, 0.87, 0.74, 0.6] as const;
+
+export const shadesFromRgb = (rgb: Rgb): string[] =>
+	SHADE_FACTORS.map(
+		(f) =>
+			`38;2;${Math.round(rgb[0] * f)};${Math.round(rgb[1] * f)};${Math.round(rgb[2] * f)}`,
+	);
+
+const PI_BRAND_RGB: Record<string, Rgb> = {
+	cyan: [228, 138, 122],
+	red: [79, 142, 179],
+	green: [234, 182, 93],
+};
+
+const PI_BRAND_SHADES: Record<string, string[]> = Object.fromEntries(
+	Object.entries(PI_BRAND_RGB).map(([name, rgb]) => [name, shadesFromRgb(rgb)]),
+);
+
+export function piLogoCellColor(
+	y: number,
+	x: number,
+	gradientOn: boolean,
+): string {
+	const shades = PI_BRAND_SHADES[piLogoRgb(y, x)];
+	if (!shades) return "  ";
+	const code = gradientOn ? shades[gradientLevel(y)] : shades[0];
+	return `\x1b[${code}m██\x1b[39m`;
+}
+
+export function accentOpenToRgb(open: string): Rgb | null {
+	const m = open.match(/38;2;(\d{1,3});(\d{1,3});(\d{1,3})/);
+	if (!m) return null;
+	const rgb: Rgb = [+m[1], +m[2], +m[3]];
+	return rgb.every((v) => v >= 0 && v <= 255) ? rgb : null;
+}
+
+export function themeAccentShades(theme: {
+	getFgAnsi?: (name: string) => string;
+}): string[] | null {
+	try {
+		const open = theme.getFgAnsi?.("accent");
+		if (!open) return null;
+		const rgb = accentOpenToRgb(open);
+		if (!rgb) return null;
+		return shadesFromRgb(rgb);
+	} catch {
+		return null;
+	}
+}
+
 export function logoCellColor(
 	frame: LogoFrame,
 	y: number,
@@ -298,19 +368,15 @@ export function logoCellColor(
 	)
 		return "green";
 
+	if (frame.phase === 6 && state.logoColorKey === "pi") {
+		if (WHITE_CELLS.has(key)) return piLogoRgb(y, x);
+		return "panel";
+	}
 	if (frame.phase === 6) {
 		const isPi = WHITE_CELLS.has(key);
-		const lvl = state.gradientOn
-			? y <= 3
-				? 1
-				: y === 4
-					? 2
-					: y === 5
-						? 3
-						: 4
-			: 0;
+		const lvl = state.gradientOn ? gradientLevel(y) + 1 : 0;
 		if (isPi) return lvl > 0 ? (("l" + lvl) as LogoColor) : "logo";
-		return state.stripeEnabled && y >= 2 && y <= LOGO_ROWS && x <= 6
+		return isStripeCell(y, x)
 			? lvl > 0
 				? (("s" + lvl) as LogoColor)
 				: "logoStripe"
@@ -596,8 +662,13 @@ class PiHeader implements Component {
 	render(width: number): string[] {
 		const theme = this.ctx.ui.theme;
 		const muted = (s: string) => theme.fg("muted", s);
+		const accent = (s: string) => theme.fg("accent", s);
+		const isPiMode = state.logoColorKey === "pi";
 
-		const logoLines = PRECOMPUTED_LOGO_FRAMES[this.frame];
+		const logoLines =
+			isPiMode && this.frame === LAST_FRAME_INDEX
+				? this.piModeLines(theme)
+				: PRECOMPUTED_LOGO_FRAMES[this.frame];
 		const logoWidth = LOGO_PIXEL_WIDTH;
 		const infoMaxWidth = Math.max(0, width - LOGO_PIXEL_WIDTH);
 		// 性能: info 面板缓存——动画帧仅做拼接，不重算 padRight/truncateToWidth/visibleWidth
@@ -619,9 +690,13 @@ class PiHeader implements Component {
 
 			const piText =
 				state.versionColored >= 2
-					? `\x1b[${CMAP[state.logoColorKey]}mPi v${VERSION}\x1b[39m`
+					? isPiMode
+						? accent(`Pi v${VERSION}`)
+						: `\x1b[${CMAP[state.logoColorKey]}mPi v${VERSION}\x1b[39m`
 					: state.versionColored >= 1
-						? `\x1b[${CMAP[state.logoColorKey]}mPi\x1b[39m ${muted(`v${VERSION}`)}`
+						? isPiMode
+							? `${accent("Pi")} ${muted(`v${VERSION}`)}`
+							: `\x1b[${CMAP[state.logoColorKey]}mPi\x1b[39m ${muted(`v${VERSION}`)}`
 						: muted(`Pi v${VERSION}`);
 			const modelLine = `${model} · ${effort}${this.stats.agents ? `  |  ${this.stats.agents}` : ""}`;
 
@@ -635,7 +710,9 @@ class PiHeader implements Component {
 				? {
 						2: piText,
 						3: state.sloganColor
-							? `\x1b[1m\x1b[${CMAP[state.logoColorKey]}m${sloganText}\x1b[39m\x1b[22m`
+							? isPiMode
+								? accent(`\x1b[1m${sloganText}\x1b[22m`)
+								: `\x1b[1m\x1b[${CMAP[state.logoColorKey]}m${sloganText}\x1b[39m\x1b[22m`
 							: muted(`\x1b[1m${sloganText}\x1b[22m`),
 						4: muted(modelLine),
 						5: muted(statsLine),
@@ -656,6 +733,30 @@ class PiHeader implements Component {
 			lines.push(padRight(logoLines[i], logoWidth) + right);
 		}
 		return lines.map((l) => padRight(truncateToWidth(l, width, ""), width));
+	}
+
+	piModeLines(theme: ExtensionContext["ui"]["theme"]): string[] {
+		const stripeShades = state.gradientOn ? themeAccentShades(theme) : null;
+		const lines: string[] = [];
+		for (let y = 1; y <= LOGO_ROWS; y++) {
+			let line = "";
+			const lvl = gradientLevel(y);
+			for (let x = 1; x <= LOGO_COLS; x++) {
+				const k = `${y},${x}`;
+				if (WHITE_CELLS.has(k)) {
+					line += piLogoCellColor(y, x, state.gradientOn);
+				} else if (isStripeCell(y, x)) {
+					line +=
+						stripeShades !== null
+							? `\x1b[${stripeShades[lvl]}m──\x1b[39m`
+							: theme.fg("accent", "──");
+				} else {
+					line += "  ";
+				}
+			}
+			lines.push(line);
+		}
+		return lines;
 	}
 
 	invalidate(): void {}
@@ -704,7 +805,7 @@ export function stateFromConfig(h: Record<string, unknown>): CCHeaderState {
 	return {
 		logoColorKey: pick(
 			h.color,
-			(v) => !!CMAP[v as string],
+			(v) => v === "pi" || !!CMAP[v as string],
 			DEFAULT_STATE.logoColorKey,
 		),
 		versionColored: pick(
@@ -816,7 +917,7 @@ function updateState(
 	const msg = updater(state);
 	if (msg === null) return; // null = 中止（已自行 notify 错误）
 
-	// 脏标记：仅颜色/渐变/横线变化需要重算帧
+	// 脏标记：仅颜色/渐变/RGB/横线变化需要重算帧
 	if (
 		(!skipFrames && state.logoColorKey !== prevColor) ||
 		state.gradientOn !== prevGrad ||
@@ -1055,7 +1156,7 @@ export default function (pi: ExtensionAPI) {
 
 	pi.registerCommand("hc", {
 		description:
-			"Header color: <code> = set (c a r o y g w b p); no args = show color key",
+			"Header color: <code> = set (c a r o y g w b p pi); no args = show color key",
 		handler: async (args, ctx) => {
 			if (!args) {
 				ctx.ui.notify(
@@ -1072,15 +1173,15 @@ export default function (pi: ExtensionAPI) {
 				ctx,
 				(msg) => reapply(pi, ctx, readSettings(settingsPath), msg),
 				(s) => {
-					if (!CMAP[args]) {
+					if (!CMAP[args] && args !== "pi") {
 						ctx.ui.notify(
-							`Invalid color: "${args}". Available: ${Object.keys(CMAP).join(" ")}`,
+							`Invalid color: "${args}". Available: ${Object.keys(COLOR_NAMES).join(" ")}`,
 							"error",
 						);
 						return null;
 					}
 					s.logoColorKey = args;
-					return `Color: ${args}`;
+					return args === "pi" ? "Color: pi (logo RGB + theme accent)" : `Color: ${args}`;
 				},
 			);
 		},
